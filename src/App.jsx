@@ -83,6 +83,10 @@ export default function App() {
       if (!mounted) return;
       setSession(data.session);
       setAuthLoading(false);
+    }).catch(() => {
+      if (!mounted) return;
+      setSession(null);
+      setAuthLoading(false);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
@@ -103,8 +107,10 @@ export default function App() {
     const protectedRoute = [views.dashboard, views.profile, views.tasks, views.analytics, views.projects, views.calendar, views.meetings].includes(currentRoute);
     const publicRoute = [views.home, views.login, views.register].includes(currentRoute);
 
-    if (!session && protectedRoute) navigate('login', true);
-    if (session && publicRoute) navigate('dashboard', true);
+    const confirmedSession = session?.user?.email_confirmed_at ? session : null;
+
+    if (!confirmedSession && protectedRoute) navigate('login', true);
+    if (confirmedSession && publicRoute) navigate('dashboard', true);
   }, [authLoading, navigate, session]);
 
   const logout = useCallback(async () => {

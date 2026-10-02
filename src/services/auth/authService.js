@@ -9,6 +9,25 @@ export async function signInWithGoogle() {
   });
 }
 
+export async function signUpWithEmail({ name, email, password }) {
+  if (!supabase) return { error: new Error('Configure VITE_SUPABASE_URL and a Supabase anon or publishable key first.') };
+
+  return supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { full_name: name },
+      emailRedirectTo: `${window.location.origin}/dashboard`
+    }
+  });
+}
+
+export async function signInWithEmail({ email, password }) {
+  if (!supabase) return { error: new Error('Configure VITE_SUPABASE_URL and a Supabase anon or publishable key first.') };
+
+  return supabase.auth.signInWithPassword({ email, password });
+}
+
 export async function signOut() {
   if (!supabase) return { error: null };
   return supabase.auth.signOut();

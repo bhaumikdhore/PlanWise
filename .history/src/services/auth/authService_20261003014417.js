@@ -1,0 +1,31 @@
+import { supabase } from '../../lib/supabaseClient';
+
+export async function signInWithGoogle() {
+  if (!supabase) return { error: new Error('Configure VITE_SUPABASE_URL and a Supabase anon or publishable key first.') };
+
+  return supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: `${window.location.origin}/dashboard` }
+  });
+}
+
+export async function signUpWithEmail({ name, email, password }) {
+  if (!supabase) return { error: new Error('Configure VITE_SUPABASE_URL and a Supabase anon or publishable key first.') };
+
+  return supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: name } }
+  });
+}
+
+export async function signInWithEmail({ email, password }) {
+  if (!supabase) return { error: new Error('Configure VITE_SUPABASE_URL and a Supabase anon or publishable key first.') };
+
+  return supabase.auth.signInWithPassword({ email, password });
+}
+
+export async function signOut() {
+  if (!supabase) return { error: null };
+  return supabase.auth.signOut();
+}
