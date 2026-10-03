@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import Avatar from '../common/Avatar';
 import NotificationCenter from './NotificationCenter';
-import { userProfile } from '../../data/mock/dashboardData';
 
-export default function Header({ onToggleSidebar, onNavigate, onLogout, darkMode, onToggleTheme }) {
+function getInitials(name) {
+  return (name || 'U').trim().split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+}
+
+export default function Header({ onToggleSidebar, onNavigate, onLogout, darkMode, onToggleTheme, profile, profileError, profileIncomplete }) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const name = profile?.full_name || profile?.email || (profileError ? 'Profile unavailable' : 'Your account');
+  const role = profile?.job_title || (profileIncomplete ? 'Complete your profile' : 'Planwise member');
 
   return (
     <header className="dashboard-topbar">
@@ -30,20 +35,20 @@ export default function Header({ onToggleSidebar, onNavigate, onLogout, darkMode
         >
           {darkMode ? '☀' : '☾'}
         </button>
-        <NotificationCenter />
+        <NotificationCenter profileIncomplete={profileIncomplete} onCompleteProfile={() => onNavigate('profile')} />
 
         <div className="profile-menu-wrap">
         <button type="button" className="profile-box" onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen}>
-          <Avatar initials={userProfile.initials} active />
+          <Avatar initials={getInitials(profile?.full_name || profile?.email)} active />
           <div className="profile-meta">
-            <strong>{userProfile.name}</strong>
-            <span>{userProfile.role}</span>
+            <strong>{name}</strong>
+            <span>{role}</span>
           </div>
           <span className="profile-chevron">▾</span>
         </button>
         {profileOpen && (
           <div className="profile-dropdown">
-            <div className="profile-dropdown-summary"><strong>{userProfile.name}</strong><span>{userProfile.role}</span><small>bhaumik@example.com</small></div>
+            <div className="profile-dropdown-summary"><strong>{name}</strong><span>{role}</span>{profile?.email && <small>{profile.email}</small>}{profileError && <small role="alert">{profileError}</small>}</div>
             <button type="button" onClick={() => { onNavigate('profile'); setProfileOpen(false); }}>👤 My Profile</button>
             <button type="button">⚙ Account Settings</button>
             <button type="button" className="profile-logout" onClick={onLogout}>🚪 Log Out</button>

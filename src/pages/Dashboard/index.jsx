@@ -13,6 +13,7 @@ import { getProjects } from '../../services/projects/projectService';
 import { getTasks, updateTaskStatus } from '../../services/tasks/taskService';
 import { getMeetings } from '../../services/meetings/meetingService';
 import { getProjectGoals } from '../../services/goals/projectGoalService';
+import { getProfile, isProfileComplete } from '../../services/profiles/profileService';
 
 const quickActions = [
   { label: 'Add Task', icon: '✓' },
@@ -35,23 +36,33 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
   const [tasks, setTasks] = useState([]);
   const [meetings, setMeetings] = useState([]);
   const [goals, setGoals] = useState([]);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const user = {
     id: session.user.id,
     profile: {
-      full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
-      email: session.user.email || ''
+      full_name: profile?.full_name || '',
+      email: profile?.email || ''
     }
   };
 
   const refresh = async () => {
+    const nextProfile = await getProfile();
+    const nextUser = {
+      ...user,
+      profile: {
+        full_name: nextProfile.full_name || '',
+        email: nextProfile.email || ''
+      }
+    };
     const [nextProjects, nextTasks, nextMeetings, nextGoals] = await Promise.all([
-      getProjects(user),
+      getProjects(nextUser),
       getTasks(),
       getMeetings(),
       getProjectGoals()
     ]);
+    setProfile(nextProfile);
     setProjects(nextProjects);
     setTasks(nextTasks);
     setMeetings(nextMeetings);
@@ -110,7 +121,7 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
   }));
   const memberMap = new Map([[session.user.id, {
     name: user.profile.full_name || user.profile.email || 'You',
-    initials: (user.profile.full_name || user.profile.email || 'You').split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
+    initials: (user.profile.full_name || user.profile.email || 'You').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
   }]]);
   projects.forEach((project) => project.members.forEach((id) => {
     if (!memberMap.has(id)) memberMap.set(id, { name: id.slice(0, 8), initials: id.slice(0, 2).toUpperCase() });
@@ -158,6 +169,10 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
       <section className="dashboard-page">
         {error && <div role="alert">{error}</div>}
         {loading && <div role="status">Refreshing dashboard data…</div>}
+        {profile && !isProfileComplete(profile) && <section className="profile-completion-banner" role="status">
+          <div><strong>Complete your profile to get started</strong><span>Add your name, job title, and organization to finish setting up your account.</span></div>
+          <button type="button" onClick={() => onNavigate('profile')}>Complete profile</button>
+        </section>}
         <div className="page-banner">
           <div className="page-banner-copy">
             <h1>{greeting}, {displayName.split(' ')[0]}!</h1>

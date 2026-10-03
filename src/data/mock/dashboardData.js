@@ -136,9 +136,3 @@ export const quickActions = [
 export const insights = [];
 
 export const activityItems = [];
-
-export const userProfile = {
-  name: 'Bhaumik Dhore',
-  role: 'Project Manager',
-  initials: 'BD'
-};

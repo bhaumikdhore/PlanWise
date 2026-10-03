@@ -3,8 +3,8 @@ import Avatar from '../../components/common/Avatar';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { getProfile, updateProfile } from '../../services/profiles/profileService';
 
-function Field({ label, value, onChange, disabled = false, placeholder = 'Optional' }) {
-  return <label className="profile-field"><span>{label}</span><input value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} /></label>;
+function Field({ label, value, onChange, disabled = false, placeholder = 'Optional', required = false }) {
+  return <label className="profile-field"><span>{label}{required ? ' *' : ''}</span><input value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} required={required} /></label>;
 }
 
 function Toggle({ label, checked, onChange }) {
@@ -26,11 +26,11 @@ export default function ProfilePage({ onNavigate, onLogout, session }) {
     setLoading(true);
     setLoadError('');
     try {
-      const row = await getProfile(session.user.id);
+      const row = await getProfile();
       const preferences = row.preferences || {};
       setProfile({
-        fullName: row.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
-        email: session.user.email || row.email || '',
+        fullName: row.full_name || '',
+        email: row.email || '',
         phone: row.phone || '',
         location: row.location || '',
         jobTitle: row.job_title || '',
@@ -59,11 +59,17 @@ export default function ProfilePage({ onNavigate, onLogout, session }) {
     localStorage.setItem('planwise-theme', value === 'Dark' ? 'dark' : 'light');
   };
   const save = async () => {
-    setSaving(true);
     setSaveError('');
     setSuccess('');
+    if (!profile.fullName.trim() || !profile.jobTitle.trim() || !profile.organization.trim()) {
+      setSaveError('Enter your full name, job title, and organization to complete your profile.');
+      setEditing(true);
+      return;
+    }
+
+    setSaving(true);
     try {
-      const row = await updateProfile(session.user.id, {
+      const row = await updateProfile({
         full_name: profile.fullName.trim(),
         phone: profile.phone,
         location: profile.location,
@@ -102,8 +108,8 @@ export default function ProfilePage({ onNavigate, onLogout, session }) {
             <div className="profile-summary-meta"><span>Organization<strong>{profile.organization || 'Not set'}</strong></span><span>Team<strong>{profile.team || 'Not set'}</strong></span></div>
           </section>
           <div className="profile-grid">
-            <section className="profile-card"><div className="profile-card-heading"><div><span className="panel-kicker">Account</span><h2>Personal Information</h2></div><button type="button" className="text-btn" onClick={() => { setEditing((value) => !value); setSuccess(''); }}>{editing ? 'Cancel' : 'Edit Profile'}</button></div><div className="profile-fields"><Field label="Full Name" value={profile.fullName} onChange={update('fullName')} disabled={!editing} /><Field label="Email" value={profile.email} disabled placeholder="Managed by Supabase Auth" /><Field label="Phone Number" value={profile.phone} onChange={update('phone')} disabled={!editing} /><Field label="Location" value={profile.location} onChange={update('location')} disabled={!editing} /></div></section>
-            <section className="profile-card"><div className="profile-card-heading"><div><span className="panel-kicker">Work identity</span><h2>Professional Information</h2></div></div><div className="profile-fields"><Field label="Job Title" value={profile.jobTitle} onChange={update('jobTitle')} disabled={!editing} /><Field label="Organization" value={profile.organization} onChange={update('organization')} disabled={!editing} /><Field label="Team" value={profile.team} onChange={update('team')} disabled={!editing} /><Field label="Role" value="Managed by project membership" disabled /></div></section>
+            <section className="profile-card"><div className="profile-card-heading"><div><span className="panel-kicker">Account</span><h2>Personal Information</h2></div><button type="button" className="text-btn" onClick={() => { setEditing((value) => !value); setSuccess(''); }}>{editing ? 'Cancel' : 'Edit Profile'}</button></div><div className="profile-fields"><Field label="Full Name" value={profile.fullName} onChange={update('fullName')} disabled={!editing} required /><Field label="Email" value={profile.email} disabled placeholder="Managed by Supabase Auth" /><Field label="Phone Number" value={profile.phone} onChange={update('phone')} disabled={!editing} /><Field label="Location" value={profile.location} onChange={update('location')} disabled={!editing} /></div></section>
+            <section className="profile-card"><div className="profile-card-heading"><div><span className="panel-kicker">Work identity</span><h2>Professional Information</h2></div></div><div className="profile-fields"><Field label="Job Title" value={profile.jobTitle} onChange={update('jobTitle')} disabled={!editing} required /><Field label="Organization" value={profile.organization} onChange={update('organization')} disabled={!editing} required /><Field label="Team" value={profile.team} onChange={update('team')} disabled={!editing} /><Field label="Role" value={profile.jobTitle || 'Not set'} disabled /></div></section>
           </div>
           <div className="profile-grid">
             <section className="profile-card"><div className="profile-card-heading"><div><span className="panel-kicker">Workspace</span><h2>Planwise Workspace</h2></div></div><div className="workspace-stats"><span>Workspace<strong>Planwise</strong></span><span>Joined<strong>{profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'Recently'}</strong></span></div></section>
