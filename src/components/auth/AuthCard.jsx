@@ -1,6 +1,6 @@
-export default function AuthCard({ title, subtitle, children, linkLabel, onLinkClick }) {
+export default function AuthCard({ title, subtitle, children, linkLabel, onLinkClick, className = '' }) {
   return (
-    <div className="auth-card glass-card">
+    <div className={`auth-card glass-card ${className}`.trim()}>
       <div className="auth-header">
         <span className="auth-kicker">Planwise</span>
         <h2>{title}</h2>

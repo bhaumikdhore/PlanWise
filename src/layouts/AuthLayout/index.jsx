@@ -1,10 +1,12 @@
 import planwiseLogo from '../../assets/logo/planwise-logo.svg';
 
-export default function AuthLayout({ children }) {
+export default function AuthLayout({ children, variant }) {
+  const variantClass = variant ? ` auth-page-shell--${variant}` : '';
+
   return (
-    <div className="auth-page-shell">
-      <div className="auth-layout">
-        <aside className="auth-brand-panel" aria-label="Planwise branding panel">
+    <div className={`auth-page-shell${variantClass}`}>
+      <div className={`auth-layout${variantClass ? ` auth-layout--${variant}` : ''}`}>
+        <aside className={`auth-brand-panel${variantClass ? ` auth-brand-panel--${variant}` : ''}`} aria-label="Planwise branding panel">
           <div className="auth-brand">
             <div className="auth-brand-logo">
               <img src={planwiseLogo} alt="Planwise logo" />

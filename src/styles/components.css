@@ -6175,3 +6175,189 @@
   .project-resource-row { align-items: flex-start; }
   .project-resource-note { align-self: center; }
 }
+
+.auth-page-shell--register {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  max-height: 100vh;
+  max-height: 100dvh;
+  padding: 16px;
+}
+
+.auth-layout--register {
+  height: min(720px, calc(100vh - 32px));
+  height: min(720px, calc(100dvh - 32px));
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+}
+
+.auth-brand-panel--register {
+  padding-top: 32px;
+  padding-bottom: 32px;
+}
+
+.auth-card--register {
+  padding: 20px 22px;
+}
+
+.auth-card--register .auth-header {
+  margin-bottom: 12px;
+}
+
+.auth-card--register .auth-header h2 {
+  margin-top: 10px;
+  font-size: clamp(1.8rem, 3.5vw, 2.2rem);
+}
+
+.auth-card--register .auth-header p {
+  margin-top: 4px;
+}
+
+.auth-form.register-form {
+  gap: 10px;
+}
+
+.register-form .auth-field {
+  gap: 5px;
+  font-size: 0.84rem;
+}
+
+.register-form .auth-field input {
+  min-height: 44px;
+  border-radius: 13px;
+}
+
+.register-form .auth-google,
+.register-form .auth-submit,
+.register-form .auth-secondary-action {
+  min-height: 44px;
+}
+
+.auth-card--register .auth-link {
+  margin-top: 10px;
+}
+
+@media (max-width: 980px), (max-height: 720px) {
+  .auth-form.register-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .register-form .auth-google,
+  .register-form .auth-google-message,
+  .register-form .auth-submit {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 980px) {
+  .auth-page-shell--register {
+    padding: 10px;
+  }
+
+  .auth-layout--register {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: calc(100vh - 20px);
+    height: calc(100dvh - 20px);
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+
+  .auth-brand-panel--register {
+    min-height: 62px;
+    padding: 8px 16px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  .auth-page-shell--register .auth-brand {
+    margin: 0;
+  }
+
+  .auth-page-shell--register .auth-brand-logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+  }
+
+  .auth-page-shell--register .auth-brand-logo img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .auth-page-shell--register .auth-brand-name {
+    font-size: 1.6rem;
+  }
+
+  .auth-page-shell--register .auth-tagline,
+  .auth-page-shell--register .auth-brand-copy-block {
+    display: none;
+  }
+
+  .auth-layout--register .auth-content-panel {
+    min-height: 0;
+    padding: 10px 16px;
+  }
+
+  .auth-card--register {
+    padding: 16px 18px;
+  }
+}
+
+@media (max-width: 360px) {
+  .auth-card--register {
+    padding: 12px 14px;
+  }
+
+  .auth-card--register .auth-header {
+    margin-bottom: 8px;
+  }
+
+  .auth-card--register .auth-kicker {
+    padding: 5px 8px;
+    font-size: 0.62rem;
+  }
+
+  .auth-card--register .auth-header h2 {
+    margin-top: 5px;
+    font-size: 1.4rem;
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+
+  .auth-card--register .auth-header p {
+    margin-top: 3px;
+    font-size: 0.78rem;
+    line-height: 1.25;
+  }
+
+  .auth-form.register-form {
+    gap: 6px;
+  }
+
+  .register-form .auth-field {
+    gap: 3px;
+  }
+
+  .register-form .auth-field span {
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .register-form .auth-field input,
+  .register-form .auth-google,
+  .register-form .auth-submit,
+  .register-form .auth-secondary-action {
+    min-height: 40px;
+  }
+
+  .auth-card--register .auth-link {
+    min-height: auto;
+    margin-top: 6px;
+    padding: 0;
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+}

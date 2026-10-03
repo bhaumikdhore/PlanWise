@@ -13,16 +13,35 @@ export default function RegisterPage({ onNavigate }) {
   const submit = async (event) => {
     event.preventDefault();
     setMessage('');
+
+    const formData = new FormData(event.currentTarget);
+    const password = formData.get('password');
+    if (password !== formData.get('confirmPassword')) {
+      setMessage('Password and Confirm Password do not match.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const formData = new FormData(event.currentTarget);
       const { data, error } = await signUpWithEmail({
         name: formData.get('name').trim(),
         email: formData.get('email'),
-        password: formData.get('password')
+        password
       });
-      if (error) setMessage(error.message);
-      else setMessage('Check your email to confirm your account.');
+      const errorCode = error?.code?.toLowerCase();
+      const errorMessage = error?.message?.toLowerCase() || '';
+      const existingAccount = ['user_already_exists', 'email_exists'].includes(errorCode)
+        || errorMessage.includes('already registered')
+        || errorMessage.includes('already exists')
+        || data?.user?.identities?.length === 0;
+
+      if (existingAccount) {
+        setMessage('An account with this email already exists');
+      } else if (error) {
+        setMessage(error.message || 'Account creation failed. Please try again.');
+      } else if (!data?.session) {
+        setMessage('Account creation did not return an active session. Check that email confirmation is disabled in Supabase.');
+      }
     } catch (error) {
       setMessage(error.message || 'Account creation failed. Please try again.');
     } finally {
@@ -31,20 +50,22 @@ export default function RegisterPage({ onNavigate }) {
   };
 
   return (
-    <AuthLayout>
+    <AuthLayout variant="register">
       <AuthCard
+        className="auth-card--register"
         title="Create your account"
         subtitle="Start planning smarter with Planwise."
         linkLabel="Already have an account? Sign in"
         onLinkClick={() => onNavigate('login')}
       >
-        <form className="auth-form" onSubmit={submit}>
+        <form className="auth-form register-form" onSubmit={submit}>
           <AuthInput label="Full Name" name="name" placeholder="Jordan Lee" autoComplete="name" required />
           <AuthInput label="Work Email" type="email" name="email" placeholder="you@company.com" autoComplete="email" required />
-          <AuthInput label="Password" type="password" name="password" placeholder="Create a strong password" autoComplete="new-password" required minLength={6} />
+          <AuthInput label="Password" type="password" name="password" placeholder="Create password" autoComplete="new-password" required minLength={6} />
+          <AuthInput label="Confirm Password" type="password" name="confirmPassword" placeholder="Confirm password" autoComplete="new-password" required minLength={6} />
 
           <GoogleAuthButton onError={setMessage} />
-          {message && <small className="auth-google-message" role={message === 'Check your email to confirm your account.' ? 'status' : 'alert'}>{message}</small>}
+          {message && <small className="auth-google-message" role="alert">{message}</small>}
 
           <Button type="submit" variant="primary" className="auth-submit" disabled={submitting}>
             {submitting ? 'Creating account…' : 'Create account'}
