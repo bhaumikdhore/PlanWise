@@ -17,7 +17,7 @@ export default function TaskPanel({ tasks, onToggleTask }) {
       <div className="task-list">
         {tasks.map((task) => (
           <div key={task.id} className={`task-row ${task.done ? 'is-done' : ''}`}>
-            <button type="button" className={`task-check ${task.done ? 'checked' : ''}`} onClick={() => onToggleTask?.(task.id)} aria-label={`${task.done ? 'Mark incomplete' : 'Mark complete'}: ${task.title}`}>
+            <button type="button" className={`task-check ${task.done ? 'checked' : ''}`} onClick={() => onToggleTask?.(task.id)} aria-label={`${task.reviewerId ? 'Submit for review' : task.done ? 'Mark incomplete' : 'Mark complete'}: ${task.title}`}>
               {task.done ? '✓' : ''}
             </button>
 

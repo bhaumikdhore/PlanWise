@@ -4,7 +4,7 @@ import { sidebarItems } from '../../data/mock/dashboardData';
 export default function Sidebar({ onNavigate, onLogout }) {
   const [collapsed, setCollapsed] = useState(false);
   const currentPath = window.location.pathname;
-  const routes = { Dashboard: 'dashboard', Projects: 'projects', Tasks: 'tasks', Calendar: 'calendar', Meetings: 'meetings', Analytics: 'analytics' };
+  const routes = { Dashboard: 'dashboard', Projects: 'projects', Tasks: 'tasks', Calendar: 'calendar', Meetings: 'meetings', Team: 'team', Analytics: 'analytics' };
 
   return (
     <aside className={`dashboard-sidebar ${collapsed ? 'is-collapsed' : ''}`}>

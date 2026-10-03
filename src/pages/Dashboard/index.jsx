@@ -10,10 +10,12 @@ import UpcomingMeetings from '../../components/dashboard/UpcomingMeetings';
 import QuickActions from '../../components/dashboard/QuickActions';
 import AIAssistant from '../../components/dashboard/AIAssistant';
 import { getProjects } from '../../services/projects/projectService';
-import { getTasks, updateTaskStatus } from '../../services/tasks/taskService';
+import { getTasks, transitionTaskStatus } from '../../services/tasks/taskService';
 import { getMeetings } from '../../services/meetings/meetingService';
 import { getProjectGoals } from '../../services/goals/projectGoalService';
 import { getProfile, isProfileComplete } from '../../services/profiles/profileService';
+import { getCollaboratorProfiles, getWorkspaceOverview } from '../../services/projects/workspaceService';
+import { createDeadlineNotifications } from '../../services/notifications/notificationService';
 
 const quickActions = [
   { label: 'Add Task', icon: '✓' },
@@ -36,9 +38,12 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
   const [tasks, setTasks] = useState([]);
   const [meetings, setMeetings] = useState([]);
   const [goals, setGoals] = useState([]);
+  const [collaborationWorkspaces, setCollaborationWorkspaces] = useState([]);
+  const [collaboratorProfiles, setCollaboratorProfiles] = useState([]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const user = {
     id: session.user.id,
     profile: {
@@ -56,17 +61,25 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
         email: nextProfile.email || ''
       }
     };
-    const [nextProjects, nextTasks, nextMeetings, nextGoals] = await Promise.all([
+    const [nextProjects, nextTasks, nextMeetings, nextGoals, nextWorkspaces] = await Promise.all([
       getProjects(nextUser),
       getTasks(),
       getMeetings(),
-      getProjectGoals()
+      getProjectGoals(),
+      getWorkspaceOverview()
+    ]);
+    const nextCollaboratorProfiles = await getCollaboratorProfiles([
+      session.user.id,
+      ...nextProjects.flatMap((project) => project.memberRoles?.map((member) => member.userId) || project.members || [])
     ]);
     setProfile(nextProfile);
     setProjects(nextProjects);
     setTasks(nextTasks);
     setMeetings(nextMeetings);
     setGoals(nextGoals);
+    setCollaborationWorkspaces(nextWorkspaces);
+    setCollaboratorProfiles(nextCollaboratorProfiles);
+    await createDeadlineNotifications();
     setError('');
   };
 
@@ -80,12 +93,20 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
     return () => { active = false; };
   }, [session.user.id]);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      createDeadlineNotifications().catch((deadlineError) => setError(deadlineError.message || 'Could not check upcoming task deadlines.'));
+    }, 60 * 60 * 1000);
+    return () => window.clearInterval(interval);
+  }, [session.user.id]);
+
   const today = dateKey(new Date());
-  const upcomingTasks = useMemo(() => tasks
+  const myTasks = useMemo(() => tasks.filter((task) => task.assigneeIds?.includes(session.user.id)), [tasks, session.user.id]);
+  const upcomingTasks = useMemo(() => myTasks
     .filter((task) => ['todo', 'in_progress'].includes(task.status))
     .sort((a, b) => (a.dueDate || '9999-12-31').localeCompare(b.dueDate || '9999-12-31'))
     .slice(0, 5)
-    .map((task) => ({ ...task, project: projects.find((project) => project.id === task.projectId)?.name || 'Personal', dueTime: formatTime(task.dueTime) })), [tasks, projects]);
+    .map((task) => ({ ...task, project: projects.find((project) => project.id === task.projectId)?.name || 'Personal', dueTime: formatTime(task.dueTime) })), [myTasks, projects]);
   const now = new Date();
   const meetingsToday = useMemo(() => meetings
     .filter((meeting) => meeting.date === today && new Date(`${meeting.date}T${meeting.startTime}:00`) >= now && !['Cancelled', 'Completed'].includes(meeting.status))
@@ -119,16 +140,29 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
     title: meeting.title,
     tone: 'purple'
   }));
+  const primaryWorkspace = collaborationWorkspaces[0];
+  const profileMap = new Map(collaboratorProfiles.map((member) => [member.id, member]));
   const memberMap = new Map([[session.user.id, {
+    id: session.user.id,
     name: user.profile.full_name || user.profile.email || 'You',
     initials: (user.profile.full_name || user.profile.email || 'You').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
   }]]);
-  projects.forEach((project) => project.members.forEach((id) => {
-    if (!memberMap.has(id)) memberMap.set(id, { name: id.slice(0, 8), initials: id.slice(0, 2).toUpperCase() });
+  projects.forEach((project) => (project.memberRoles || (project.members || []).map((userId) => ({ userId }))).forEach(({ userId }) => {
+    const member = profileMap.get(userId);
+    if (!memberMap.has(userId)) {
+      const name = member?.full_name || member?.email || 'Teammate';
+      memberMap.set(userId, { id: userId, name, initials: name.split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'T' });
+    }
   }));
+  primaryWorkspace?.members.forEach((workspaceMember) => {
+    const profile = workspaceMember.profile;
+    const name = profile?.full_name || profile?.email || 'Teammate';
+    memberMap.set(workspaceMember.user_id, { id: workspaceMember.user_id, name, initials: name.split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'T' });
+  });
   const memberList = [...memberMap.values()].slice(0, 6);
   const pendingTasks = tasks.filter((task) => ['todo', 'in_progress'].includes(task.status));
   const completedTasks = tasks.filter((task) => task.status === 'completed');
+  const myReviewTasks = myTasks.filter((task) => task.status === 'in_review');
   const activeGoals = goals.filter((goal) => goal.status !== 'Complete');
   const metricCards = [
     { label: 'Tasks Today', value: tasks.filter((task) => task.dueDate === today && ['todo', 'in_progress'].includes(task.status)).length, trend: '', tone: 'blue', description: 'Due today', progress: tasks.length ? Math.round(tasks.filter((task) => task.dueDate === today && task.status === 'completed').length / Math.max(tasks.filter((task) => task.dueDate === today).length, 1) * 100) : 0 },
@@ -153,8 +187,10 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
     const task = tasks.find((item) => item.id === taskId);
     if (!task) return;
     try {
-      await updateTaskStatus(task, true, session.user.id);
+      const status = task.reviewerId ? 'in_review' : 'completed';
+      await transitionTaskStatus(task, status);
       await refresh();
+      setSuccess(status === 'in_review' ? 'Submitted for Review.' : 'Task completed.');
     } catch (updateError) {
       setError(updateError.message || 'Could not update this task.');
     }
@@ -168,6 +204,7 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
     <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} session={session} backgroundVariant="dashboard">
       <section className="dashboard-page">
         {error && <div role="alert">{error}</div>}
+        {success && <div role="status">{success}</div>}
         {loading && <div role="status">Refreshing dashboard data…</div>}
         {profile && !isProfileComplete(profile) && <section className="profile-completion-banner" role="status">
           <div><strong>Complete your profile to get started</strong><span>Add your name, job title, and organization to finish setting up your account.</span></div>
@@ -200,6 +237,21 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
             />
           ))}
         </div>
+
+        {primaryWorkspace && <section className="collaboration-dashboard">
+          <div className="collaboration-dashboard-heading">
+            <div><span className="panel-kicker">Team overview</span><h2>{primaryWorkspace.name}</h2></div>
+            <button type="button" onClick={() => onNavigate('team')}>Open team</button>
+          </div>
+          <div className="collaboration-dashboard-grid">
+            <button type="button" onClick={() => onNavigate('tasks')}><span>My assigned tasks</span><strong>{myTasks.length}</strong></button>
+            <button type="button" onClick={() => onNavigate('tasks')}><span>In progress</span><strong>{myTasks.filter((task) => task.status === 'in_progress').length}</strong></button>
+            <button type="button" onClick={() => onNavigate('tasks')}><span>Awaiting review</span><strong>{myReviewTasks.length}</strong></button>
+            <button type="button" onClick={() => onNavigate('tasks')}><span>Completed</span><strong>{myTasks.filter((task) => task.status === 'completed').length}</strong></button>
+            <button type="button" onClick={() => onNavigate('team')}><span>Team members</span><strong>{primaryWorkspace.members.length}</strong></button>
+            <button type="button" onClick={() => onNavigate('team')}><span>Overdue tasks</span><strong>{myTasks.filter((task) => task.dueDate && task.dueDate < today && !['completed', 'cancelled'].includes(task.status)).length}</strong></button>
+          </div>
+        </section>}
 
         <div className="content-grid analytics-grid">
           <ProjectAnalytics data={analyticsData} goals={goalSummary} />

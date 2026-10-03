@@ -172,7 +172,7 @@ function ProjectDetails({ project, tasks, meetings, user, onBack, onEdit, onSucc
 
   const toggleTask = async (task) => {
     try {
-      await updateTaskStatus(task, !task.done, user.id);
+      await updateTaskStatus(task, !task.done);
       await refresh();
     } catch (error) {
       setFormError(error.message || 'Could not update this task.');

@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabaseClient.js';
 import { recordActivity } from '../activity/activityLogService.js';
 
-const validStatuses = new Set(['todo', 'in_progress', 'completed', 'cancelled']);
+const validStatuses = new Set(['todo', 'in_progress', 'in_review', 'blocked', 'completed', 'cancelled']);
 const validPriorities = new Set(['low', 'medium', 'high']);
 
 function requireClient() {
@@ -18,8 +18,9 @@ function toLocalDateTime(value) {
   };
 }
 
-function mapTask(row, assigneeIds) {
+function mapTask(row, assigneeIds, profiles = []) {
   const { dueDate, dueTime } = toLocalDateTime(row.due_at);
+  const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
   return {
     id: row.id,
     projectId: row.project_id || '',
@@ -32,6 +33,11 @@ function mapTask(row, assigneeIds) {
     done: row.status === 'completed',
     status: row.status,
     assigneeIds,
+    assignees: assigneeIds.map((id) => profileMap.get(id) || { id, full_name: '', email: '' }),
+    reviewerId: row.reviewer_id || '',
+    reviewer: profileMap.get(row.reviewer_id) || null,
+    reviewFeedback: row.review_feedback || '',
+    reviewRequestedAt: row.review_requested_at || '',
     createdBy: row.created_by,
     completedAt: row.completed_at || '',
     createdAt: row.created_at
@@ -54,6 +60,8 @@ function taskPayload(task) {
     priority: validPriorities.has(priority) ? priority : 'medium',
     category: task.category || null,
     due_at: dueAt,
+    reviewer_id: task.reviewerId || null,
+    review_feedback: task.reviewFeedback || null,
     completed_at: status === 'completed' ? task.completedAt || new Date().toISOString() : null
   };
 }
@@ -93,7 +101,19 @@ export async function getTasks(projectId) {
   if (assigneeError) throw assigneeError;
   const assignedByTask = new Map();
   assignees.forEach(({ task_id, user_id }) => assignedByTask.set(task_id, [...(assignedByTask.get(task_id) || []), user_id]));
-  return data.map((task) => mapTask(task, assignedByTask.get(task.id) || []));
+  const profileIds = [...new Set([
+    ...assignees.map(({ user_id }) => user_id),
+    ...data.map(({ reviewer_id, created_by }) => [reviewer_id, created_by]).flat()
+  ].filter(Boolean))];
+  let profiles = [];
+  if (profileIds.length) {
+    const { data: profileRows, error: profileError } = await supabase.from('profiles')
+      .select('id,full_name,email,avatar_url')
+      .in('id', profileIds);
+    if (profileError) throw profileError;
+    profiles = profileRows;
+  }
+  return data.map((task) => mapTask(task, assignedByTask.get(task.id) || [], profiles));
 }
 
 export async function saveTask(task, userId) {
@@ -122,23 +142,43 @@ export async function saveTask(task, userId) {
   return mapTask(data, task.assigneeIds || []);
 }
 
-export async function updateTaskStatus(task, done, userId) {
+export async function updateTaskStatus(task, done) {
+  return transitionTaskStatus(task, done ? 'completed' : 'todo');
+}
+
+export async function transitionTaskStatus(task, status, reviewFeedback = task.reviewFeedback || '') {
   requireClient();
-  const status = done ? 'completed' : 'todo';
+  if (!validStatuses.has(status)) throw new Error('Choose a valid task status.');
   const { data, error } = await supabase.from('tasks').update({
     status,
-    completed_at: done ? new Date().toISOString() : null
+    review_feedback: reviewFeedback || null,
+    completed_at: status === 'completed' ? new Date().toISOString() : null
   }).eq('id', task.id).select('*').single();
   if (error) throw error;
-  await recordActivity({
-    actorId: userId,
-    projectId: data.project_id,
-    action: done ? 'task_completed' : 'task_reopened',
-    entityType: 'task',
-    entityId: data.id,
-    metadata: { title: data.title, status: data.status }
-  });
-  return mapTask(data, task.assigneeIds || []);
+  const profileIds = [...new Set([...(task.assigneeIds || []), data.reviewer_id, data.created_by].filter(Boolean))];
+  const { data: profiles, error: profileError } = profileIds.length
+    ? await supabase.from('profiles').select('id,full_name,email,avatar_url').in('id', profileIds)
+    : { data: [], error: null };
+  if (profileError) throw profileError;
+  return mapTask(data, task.assigneeIds || [], profiles);
+}
+
+export async function getTaskActivity(taskId) {
+  requireClient();
+  const { data: activities, error } = await supabase.from('activity_logs')
+    .select('id,actor_id,action,metadata,created_at')
+    .eq('entity_type', 'task')
+    .eq('entity_id', taskId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const actorIds = [...new Set(activities.map(({ actor_id }) => actor_id).filter(Boolean))];
+  if (!actorIds.length) return activities.map((activity) => ({ ...activity, actor: null }));
+  const { data: profiles, error: profileError } = await supabase.from('profiles')
+    .select('id,full_name,email,avatar_url')
+    .in('id', actorIds);
+  if (profileError) throw profileError;
+  const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
+  return activities.map((activity) => ({ ...activity, actor: profileMap.get(activity.actor_id) || null }));
 }
 
 export async function deleteTask(taskId, userId) {

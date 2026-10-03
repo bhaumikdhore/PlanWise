@@ -11,7 +11,7 @@ export default function TeamMembers({ members }) {
 
       <div className="team-stack">
         {members.map((member, index) => (
-          <div key={member.name} className="member-avatar" style={{ zIndex: members.length - index }}>
+          <div key={member.id || member.name} className="member-avatar" style={{ zIndex: members.length - index }}>
             <Avatar initials={member.initials} size="lg" active={index < 4} />
           </div>
         ))}

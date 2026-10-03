@@ -27,6 +27,7 @@ function mapProject(row, memberships, user) {
     archived: Boolean(row.archived_at),
     owner: profile?.full_name || profile?.email || (user?.id === row.owner_id ? 'You' : row.owner_id),
     ownerId: row.owner_id,
+    workspaceId: row.workspace_id || '',
     members: memberships.filter((member) => member.project_id === row.id && member.role !== 'owner').map((member) => member.user_id),
     memberRoles: memberships.filter((member) => member.project_id === row.id).map(({ user_id, role }) => ({ userId: user_id, role })),
     color: 'blue',
@@ -68,7 +69,8 @@ export async function saveProject(project, user) {
     status: statusToDatabase[project.status] || 'planning',
     start_date: project.startDate || null,
     due_date: project.deadline || null,
-    archived_at: project.archived ? new Date().toISOString() : null
+    archived_at: project.archived ? new Date().toISOString() : null,
+    ...(project.workspaceId !== undefined ? { workspace_id: project.workspaceId || null } : {})
   };
   const query = project.id
     ? supabase.from('projects').update(payload).eq('id', project.id)

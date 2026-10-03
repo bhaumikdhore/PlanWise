@@ -10,6 +10,7 @@ import AboutPage from './pages/About';
 import TasksPage from './pages/Tasks';
 import AnalyticsPage from './pages/Analytics';
 import ProjectsPage from './pages/Projects';
+import TeamPage from './pages/Team';
 const CalendarPage = lazy(() => import('./pages/Calendar'));
 const MeetingsPage = lazy(() => import('./pages/Meetings'));
 import { supabase } from './lib/supabaseClient';
@@ -28,7 +29,8 @@ const views = {
   calendar: 'calendar',
   meetings: 'meetings',
   analytics: 'analytics',
-  projects: 'projects'
+  projects: 'projects',
+  team: 'team'
 };
 
 const pathViews = {
@@ -45,10 +47,14 @@ const pathViews = {
   '/calendar': views.calendar,
   '/meetings': views.meetings,
   '/analytics': views.analytics,
-  '/projects': views.projects
+  '/projects': views.projects,
+  '/team': views.team
 };
 
-const routeForPath = (path) => pathViews[path] || (path.startsWith('/projects/') ? views.projects : views.dashboard);
+const routeForPath = (path) => {
+  const pathname = path.split('?')[0];
+  return pathViews[pathname] || (pathname.startsWith('/projects/') ? views.projects : views.dashboard);
+};
 
 export default function App() {
   const [locationPath, setLocationPath] = useState(() => window.location.pathname);
@@ -104,13 +110,25 @@ export default function App() {
 
     const currentPath = window.location.pathname;
     const currentRoute = routeForPath(currentPath);
-    const protectedRoute = [views.dashboard, views.profile, views.tasks, views.analytics, views.projects, views.calendar, views.meetings].includes(currentRoute);
+    if (currentRoute === views.team) {
+      const inviteToken = new URLSearchParams(window.location.search).get('invite');
+      if (inviteToken) sessionStorage.setItem('planwise-pending-invite', inviteToken);
+    }
+    const protectedRoute = [views.dashboard, views.profile, views.tasks, views.analytics, views.projects, views.calendar, views.meetings, views.team].includes(currentRoute);
     const publicRoute = [views.home, views.login, views.register].includes(currentRoute);
 
     const confirmedSession = session?.user?.email_confirmed_at ? session : null;
 
     if (!confirmedSession && protectedRoute) navigate('login', true);
-    if (confirmedSession && publicRoute) navigate('dashboard', true);
+    if (confirmedSession && publicRoute) {
+      const pendingInvite = sessionStorage.getItem('planwise-pending-invite');
+      if (pendingInvite) {
+        sessionStorage.removeItem('planwise-pending-invite');
+        navigate(`team?invite=${encodeURIComponent(pendingInvite)}`, true);
+      } else {
+        navigate('dashboard', true);
+      }
+    }
   }, [authLoading, navigate, session]);
 
   const logout = useCallback(async () => {
@@ -136,11 +154,16 @@ export default function App() {
     if (activeView === views.meetings) return <Suspense fallback={<main className="calendar-loading" role="status">Loading meetings…</main>}><MeetingsPage onNavigate={navigate} onLogout={logout} session={session} /></Suspense>;
     if (activeView === views.analytics) return <AnalyticsPage onNavigate={navigate} onLogout={logout} session={session} />;
     if (activeView === views.projects) return <ProjectsPage onNavigate={navigate} onLogout={logout} session={session} locationPath={locationPath} />;
+    if (activeView === views.team) return <TeamPage onNavigate={navigate} onLogout={logout} session={session} />;
     if (activeView === views.home) return <HomePage onNavigate={navigate} />;
     return <DashboardPage onNavigate={navigate} />;
   }, [activeView, locationPath]);
 
   if (authLoading) return null;
+  const protectedViews = [views.dashboard, views.profile, views.tasks, views.analytics, views.projects, views.calendar, views.meetings, views.team];
+  if (protectedViews.includes(activeView) && !session?.user?.email_confirmed_at) {
+    return <LoginPage onNavigate={navigate} />;
+  }
 
   return currentView;
 }

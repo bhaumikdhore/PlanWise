@@ -7074,3 +7074,579 @@ textarea {
     padding: 13px;
   }
 }
+.team-page {
+  display: grid;
+  gap: 22px;
+  width: 100%;
+  min-width: 0;
+  color: var(--text);
+}
+
+.team-page-heading,
+.team-panel-heading,
+.team-create-card,
+.team-workspace-picker,
+.team-project-row,
+.team-invitation-row,
+.team-member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.team-page-heading h1 {
+  margin: 4px 0;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+}
+
+.team-page-heading p,
+.team-panel-heading p,
+.team-create-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.team-create-card,
+.team-empty-state,
+.team-panel,
+.team-invitation-callout,
+.team-workspace-picker {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
+}
+
+.team-create-card h2,
+.team-panel h2,
+.team-empty-state h2 {
+  margin: 0 0 5px;
+  font-size: 1.08rem;
+}
+
+.team-create-card form,
+.team-inline-actions,
+.team-invite-form,
+.team-invite-link > div,
+.team-member-actions {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.team-create-card input,
+.team-workspace-picker select,
+.team-invite-form input,
+.team-invite-form select,
+.team-invite-link input,
+.team-member-actions select,
+.team-project-row select {
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-strong);
+  color: var(--text);
+}
+
+.team-create-card input {
+  width: min(280px, 42vw);
+}
+
+.team-workspace-picker {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.team-workspace-picker label,
+.team-invite-form label,
+.team-invite-link label,
+.team-project-row label {
+  display: grid;
+  gap: 7px;
+  color: var(--text-soft);
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.team-workspace-picker select {
+  min-width: min(280px, 100%);
+}
+
+.team-role-chip,
+.team-invite-status,
+.task-status-badge,
+.task-reviewer-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-soft);
+  color: var(--text-soft);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.role-owner,
+.role-admin,
+.status-in_review {
+  color: var(--blue-strong);
+}
+
+.status-completed,
+.status-accepted {
+  color: var(--success-text, #07805c);
+}
+
+.status-blocked,
+.status-declined,
+.status-revoked,
+.status-expired {
+  color: var(--danger-text, #c2414b);
+}
+
+.team-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.team-metric-grid article {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--panel);
+}
+
+.team-metric-grid span,
+.team-member-identity span,
+.team-invitation-row span,
+.team-project-title span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.team-metric-grid strong {
+  font-size: 1.65rem;
+}
+
+.team-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.team-invite-form {
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.team-invite-form label:first-child {
+  flex: 1 1 240px;
+}
+
+.team-invite-form label:nth-child(2) {
+  flex: 0 1 170px;
+}
+
+.team-invite-form input,
+.team-invite-form select {
+  width: 100%;
+}
+
+.team-invite-link {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.team-invite-link > div {
+  align-items: stretch;
+}
+
+.team-invite-link input {
+  flex: 1;
+  width: 100%;
+}
+
+.team-member-list,
+.team-invitation-list,
+.team-project-list {
+  display: grid;
+  min-width: 0;
+}
+
+.team-member-row,
+.team-invitation-row,
+.team-project-row {
+  min-width: 0;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.team-member-identity,
+.team-invitation-row > div,
+.team-project-title {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+}
+
+.team-member-identity span,
+.team-invitation-row strong,
+.team-project-title strong {
+  overflow-wrap: anywhere;
+}
+
+.team-member-workload,
+.team-project-count {
+  color: var(--muted);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.team-member-actions {
+  align-items: center;
+}
+
+.team-remove-button {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.team-remove-button:hover {
+  border-color: var(--danger-text, #c2414b);
+  color: var(--danger-text, #c2414b);
+}
+
+.team-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.team-empty-state > span {
+  color: var(--blue);
+  font-size: 2rem;
+}
+
+.team-empty-state p,
+.team-empty-inline,
+.team-project-row small {
+  color: var(--muted);
+}
+
+.team-empty-inline {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.team-invitation-callout {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.team-invitation-callout > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.team-invitation-callout span {
+  color: var(--muted);
+}
+
+.team-feedback {
+  padding: 12px 15px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.team-error {
+  border-color: rgba(220, 65, 77, 0.35);
+  color: var(--danger-text, #c2414b);
+}
+
+.team-success {
+  border-color: rgba(16, 160, 120, 0.32);
+  color: var(--success-text, #07805c);
+}
+
+.team-loading {
+  padding: 30px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.team-project-row {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.team-project-row > label {
+  flex: 1 1 210px;
+}
+
+.team-project-row > label select[multiple] {
+  min-height: 76px;
+}
+
+.team-project-row small {
+  font-weight: 400;
+}
+
+.task-status-badge {
+  margin-left: auto;
+}
+
+.task-status-badge.status-todo {
+  color: var(--muted-strong);
+}
+
+.task-status-badge.status-in_progress {
+  color: var(--blue-strong);
+}
+
+.task-status-badge.status-blocked,
+.task-status-badge.status-cancelled {
+  color: var(--danger-text, #c2414b);
+}
+
+.task-assignee-list,
+.task-assignee-chip,
+.task-workflow-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.task-assignee-list {
+  margin-top: 12px;
+}
+
+.task-assignee-chip {
+  padding: 4px 9px 4px 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+}
+
+.task-assignee-chip .avatar {
+  width: 26px;
+  height: 26px;
+}
+
+.task-reviewer-chip {
+  margin-left: 2px;
+}
+
+.task-workflow-actions {
+  margin-top: 12px;
+}
+
+.task-workflow-actions button {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-soft);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.task-workflow-actions .task-approve-button {
+  border-color: transparent;
+  background: var(--blue-strong);
+  color: #fff;
+}
+
+.task-review-waiting {
+  color: var(--blue-strong);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.task-activity-details {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--text-soft);
+}
+
+.task-activity-details summary {
+  width: fit-content;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.task-activity-details ol {
+  display: grid;
+  gap: 10px;
+  padding: 12px 0 0 22px;
+}
+
+.task-activity-details li {
+  padding-left: 3px;
+  font-size: 0.84rem;
+}
+
+.task-activity-details time {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.task-modal small {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.notification-item-content {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.notification-item-content.is-read {
+  opacity: 0.68;
+}
+
+.notification-item-content p,
+.notification-item-content time {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .team-metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .team-member-row {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 600px) {
+  .team-page {
+    gap: 14px;
+  }
+
+  .team-page-heading,
+  .team-create-card,
+  .team-invitation-callout {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .team-create-card,
+  .team-panel,
+  .team-workspace-picker,
+  .team-invitation-callout {
+    padding: 15px;
+  }
+
+  .team-create-card form,
+  .team-invite-form,
+  .team-invite-link > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .team-create-card input,
+  .team-workspace-picker select {
+    width: 100%;
+  }
+
+  .team-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .team-metric-grid article {
+    padding: 12px;
+  }
+
+  .team-member-row,
+  .team-invitation-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 9px 12px;
+  }
+
+  .team-member-row > :nth-child(n + 3),
+  .team-invitation-row > :nth-child(n + 2) {
+    grid-column: 2;
+  }
+
+  .team-member-actions {
+    flex-wrap: wrap;
+  }
+
+  .team-project-row {
+    display: grid;
+  }
+
+  .team-project-row > label {
+    width: 100%;
+  }
+
+  .team-project-row select {
+    width: 100%;
+  }
+
+  .task-page-title-row {
+    flex-wrap: wrap;
+  }
+
+  .task-status-badge {
+    margin-left: 0;
+  }
+
+  .task-page-actions,
+  .task-workflow-actions {
+    width: 100%;
+  }
+
+  .task-workflow-actions button {
+    flex: 1 1 auto;
+  }
+
+  .notification-panel {
+    position: fixed;
+    top: 72px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-width: none;
+    max-height: min(75vh, 620px);
+    overflow: auto;
+  }
+}

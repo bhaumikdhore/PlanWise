@@ -35,7 +35,12 @@ export default function Header({ onToggleSidebar, onNavigate, onLogout, darkMode
         >
           {darkMode ? '☀' : '☾'}
         </button>
-        <NotificationCenter profileIncomplete={profileIncomplete} onCompleteProfile={() => onNavigate('profile')} />
+        <NotificationCenter
+          profileIncomplete={profileIncomplete}
+          onCompleteProfile={() => onNavigate('profile')}
+          userId={profile?.id}
+          onNavigate={onNavigate}
+        />
 
         <div className="profile-menu-wrap">
         <button type="button" className="profile-box" onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen}>
