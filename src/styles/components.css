@@ -6473,6 +6473,29 @@
   .topbar-search input { font-size: .72rem; }
 }
 
+/* Keep the landing-page calls to action compact on small screens. */
+@media (max-width: 640px) {
+  .hero-actions {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .hero-actions .btn {
+    width: fit-content;
+    min-height: 42px;
+    padding-inline: 16px;
+    font-size: .84rem;
+  }
+}
+
+@media (max-width: 375px) {
+  .hero-actions .btn {
+    min-height: 40px;
+    padding-inline: 13px;
+    font-size: .78rem;
+  }
+}
+
 .profile-completion-banner {
   display: flex;
   align-items: center;
