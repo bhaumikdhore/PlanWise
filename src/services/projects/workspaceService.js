@@ -24,7 +24,7 @@ export async function getCollaboratorProfiles(userIds) {
 export async function getWorkspaceOverview() {
   requireClient();
   const { data: workspaces, error: workspaceError } = await supabase.from('workspaces')
-    .select('id,name,created_by,created_at')
+    .select('id,name,description,created_by,created_at')
     .order('created_at', { ascending: false });
   if (workspaceError) throw workspaceError;
   if (!workspaces.length) return [];
@@ -110,13 +110,14 @@ export async function getWorkspaceOverview() {
   });
 }
 
-export async function createWorkspace(name, userId) {
+export async function createWorkspace(name, userId, description = '') {
   requireClient();
   const cleanName = String(name || '').trim();
   if (!cleanName) throw new Error('Enter a workspace name.');
+  const cleanDescription = String(description || '').trim();
   const { data, error } = await supabase.from('workspaces')
-    .insert({ name: cleanName, created_by: userId })
-    .select('id,name,created_by,created_at')
+    .insert({ name: cleanName, description: cleanDescription || null, created_by: userId })
+    .select('id,name,description,created_by,created_at')
     .single();
   if (error) throw error;
   return data;
@@ -145,6 +146,13 @@ export async function inviteWorkspaceMember({ workspaceId, email, role = 'member
 export async function acceptWorkspaceInvitation(token) {
   requireClient();
   const { data, error } = await supabase.rpc('accept_workspace_invitation', { p_invite_token: token });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] : data;
+}
+
+export async function previewWorkspaceInvitation(token) {
+  requireClient();
+  const { data, error } = await supabase.rpc('preview_workspace_invitation', { p_invite_token: token });
   if (error) throw error;
   return Array.isArray(data) ? data[0] : data;
 }

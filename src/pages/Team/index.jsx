@@ -7,10 +7,10 @@ import { syncProjectMembers } from '../../services/projects/projectMemberService
 import {
   acceptWorkspaceInvitation,
   createWorkspace,
-  declineWorkspaceInvitation,
   getWorkspaceOverview,
   inviteWorkspaceMember,
   linkProjectToWorkspace,
+  previewWorkspaceInvitation,
   removeWorkspaceMember,
   revokeWorkspaceInvitation,
   updateWorkspaceMemberRole
@@ -31,29 +31,38 @@ function inviteStatus(invitation) {
 }
 
 export default function TeamPage({ onNavigate, onLogout, session }) {
+  const initialInvite = new URLSearchParams(window.location.search).get('invite') || '';
   const [workspaces, setWorkspaces] = useState([]);
   const [projects, setProjects] = useState([]);
   const [selectedId, setSelectedId] = useState('');
+  const [onboardingStep, setOnboardingStep] = useState(initialInvite ? 'join' : null);
   const [workspaceName, setWorkspaceName] = useState('');
+  const [workspaceDescription, setWorkspaceDescription] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('member');
   const [inviteLink, setInviteLink] = useState('');
-  const [inviteToken, setInviteToken] = useState(() => new URLSearchParams(window.location.search).get('invite') || '');
+  const [inviteCode, setInviteCode] = useState(initialInvite);
+  const [inviteToken, setInviteToken] = useState(initialInvite);
+  const [invitationPreview, setInvitationPreview] = useState(null);
+  const [invitationStatus, setInvitationStatus] = useState('idle');
+  const [invitationError, setInvitationError] = useState('');
+  const [createdWorkspace, setCreatedWorkspace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const refresh = async () => {
+  const refresh = async (preferredWorkspaceId) => {
     const [nextWorkspaces, nextProjects] = await Promise.all([
       getWorkspaceOverview(),
       getProjects({ id: session.user.id, profile: session.user.user_metadata || {} })
     ]);
     setWorkspaces(nextWorkspaces);
     setProjects(nextProjects.filter((project) => !project.archived));
-    setSelectedId((current) => current && nextWorkspaces.some(({ id }) => id === current)
-      ? current
-      : nextWorkspaces[0]?.id || '');
+    setSelectedId((current) => {
+      if (preferredWorkspaceId && nextWorkspaces.some(({ id }) => id === preferredWorkspaceId)) return preferredWorkspaceId;
+      return current && nextWorkspaces.some(({ id }) => id === current) ? current : nextWorkspaces[0]?.id || '';
+    });
   };
 
   useEffect(() => {
@@ -78,6 +87,46 @@ export default function TeamPage({ onNavigate, onLogout, session }) {
   const currentMember = workspace?.members.find(({ user_id }) => user_id === session.user.id);
   const canManage = ['owner', 'admin'].includes(currentMember?.role);
 
+  const validateInvitation = async (value) => {
+    let token = String(value || '').trim();
+    if (!token) {
+      setInvitationPreview(null);
+      setInvitationStatus('invalid');
+      setInvitationError('Enter an invitation code or paste an invitation link.');
+      return;
+    }
+    try {
+      const parsedUrl = new URL(token);
+      token = new URLSearchParams(parsedUrl.search).get('invite') || token;
+    } catch {
+      token = new URLSearchParams(token.replace(/^\?/, '')).get('invite') || token;
+    }
+
+    setInviteToken(token);
+    setInvitationStatus('checking');
+    setInvitationError('');
+    setInvitationPreview(null);
+    try {
+      const preview = await previewWorkspaceInvitation(token);
+      setInvitationPreview(preview?.status === 'valid' ? preview : null);
+      setInvitationStatus(preview?.status || 'invalid');
+      if (preview?.status === 'expired') {
+        setInvitationError('This invitation has expired. Ask the workspace owner for a new link.');
+      } else if (preview?.status === 'unavailable') {
+        setInvitationError('This invitation has already been used, declined, or revoked.');
+      } else if (preview?.status !== 'valid') {
+        setInvitationError('This invitation is invalid or was sent to a different email address.');
+      }
+    } catch (validationError) {
+      setInvitationStatus('error');
+      setInvitationError(validationError.message || 'We could not verify this invitation. Check your permissions and try again.');
+    }
+  };
+
+  useEffect(() => {
+    if (initialInvite) validateInvitation(initialInvite);
+  }, []);
+
   const runAction = async (action, successMessage) => {
     setSaving(true);
     setError('');
@@ -96,14 +145,55 @@ export default function TeamPage({ onNavigate, onLogout, session }) {
 
   const handleCreateWorkspace = async (event) => {
     event.preventDefault();
-    const created = await runAction(
-      () => createWorkspace(workspaceName, session.user.id),
-      'Workspace created.'
-    );
-    if (!created) return;
+    let created;
+    const result = await runAction(async () => {
+      created = await createWorkspace(workspaceName, session.user.id, workspaceDescription);
+    }, 'Workspace created.');
+    if (!result) return;
     setWorkspaceName('');
-    await refresh();
-    setSelectedId((await getWorkspaceOverview()).find(({ name }) => name === workspaceName.trim())?.id || '');
+    setWorkspaceDescription('');
+    setCreatedWorkspace(created);
+    setOnboardingStep('created');
+    try {
+      await refresh(created.id);
+    } catch (refreshError) {
+      setError(`Workspace created, but its details could not be loaded: ${refreshError.message}`);
+    }
+  };
+
+  const clearInvitationRoute = () => {
+    sessionStorage.removeItem('planwise-pending-invite');
+    window.history.replaceState({}, '', '/team');
+  };
+
+  const handleBackFromOnboarding = () => {
+    setError('');
+    setSuccess('');
+    setInvitationPreview(null);
+    setInvitationStatus('idle');
+    setInvitationError('');
+    setInviteCode('');
+    setInviteToken('');
+    clearInvitationRoute();
+    setOnboardingStep(workspaces.length ? null : 'choose');
+  };
+
+  const handleAcceptInvitation = async () => {
+    const result = await runAction(async () => {
+      const joined = await acceptWorkspaceInvitation(inviteToken);
+      if (!joined?.workspace_id) throw new Error('The invitation could not be accepted. Please verify it again.');
+      await refresh(joined.workspace_id);
+    }, 'You joined the workspace.');
+    if (!result) return;
+    clearInvitationRoute();
+    setOnboardingStep(null);
+    setInvitationPreview(null);
+    setInvitationStatus('idle');
+  };
+
+  const handleInviteMembersNext = () => {
+    setOnboardingStep(null);
+    window.setTimeout(() => document.getElementById('workspace-invite-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
   };
 
   const handleInvite = async (event) => {
@@ -125,18 +215,6 @@ export default function TeamPage({ onNavigate, onLogout, session }) {
     } catch {
       setError('Clipboard access was unavailable. Select and copy the invitation link.');
     }
-  };
-
-  const handleInviteDecision = async (accept) => {
-    const result = await runAction(
-      () => accept ? acceptWorkspaceInvitation(inviteToken) : declineWorkspaceInvitation(inviteToken),
-      accept ? 'Invitation accepted. You have joined the workspace.' : 'Invitation declined.'
-    );
-    if (!result) return;
-    setInviteToken('');
-    sessionStorage.removeItem('planwise-pending-invite');
-    window.history.replaceState({}, '', '/team');
-    await refresh();
   };
 
   const handleMemberRole = async (member, role) => {
@@ -186,33 +264,107 @@ export default function TeamPage({ onNavigate, onLogout, session }) {
             <h1>Team workspace</h1>
             <p>Bring your projects and teammates together in one shared space.</p>
           </div>
-          <Button type="button" variant="secondary" onClick={refresh} disabled={saving || loading}>Refresh</Button>
+          {onboardingStep && workspaces.length
+            ? <Button type="button" variant="secondary" onClick={handleBackFromOnboarding}>Back to workspaces</Button>
+            : workspaces.length
+              ? <div className="team-heading-actions">
+                <Button type="button" variant="secondary" onClick={() => setOnboardingStep('choose')} disabled={saving}>Add workspace</Button>
+                <Button type="button" variant="secondary" onClick={() => refresh()} disabled={saving || loading}>Refresh</Button>
+              </div>
+              : null}
         </header>
 
         {error && <div className="team-feedback team-error" role="alert">{error}</div>}
         {success && <div className="team-feedback team-success" role="status">{success}</div>}
-        {inviteToken && <section className="team-invitation-callout">
-          <div><strong>You have a workspace invitation</strong><span>Accept to join the team, or decline this invitation.</span></div>
-          <div className="team-inline-actions">
-            <Button type="button" variant="primary" onClick={() => handleInviteDecision(true)} disabled={saving}>{saving ? 'Working…' : 'Accept invitation'}</Button>
-            <Button type="button" variant="secondary" onClick={() => handleInviteDecision(false)} disabled={saving}>Decline</Button>
-          </div>
-        </section>}
 
-        {loading ? <div className="team-loading" role="status">Loading workspaces…</div> : <>
-          <section className="team-create-card">
-            <div><h2>Create a workspace</h2><p>Workspace roles apply only to that workspace; they do not change a user&apos;s global account role.</p></div>
-            <form onSubmit={handleCreateWorkspace}>
-              <label className="sr-only" htmlFor="new-workspace-name">Workspace name</label>
-              <input id="new-workspace-name" value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} placeholder="e.g. Product team" maxLength={100} required />
-              <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Creating…' : 'Create workspace'}</Button>
-            </form>
+        {loading ? <div className="team-loading" role="status">Loading workspaces…</div> : onboardingStep || !workspaces.length ? (
+          <section className="team-onboarding" aria-live="polite">
+            {(!onboardingStep || onboardingStep === 'choose') && <>
+              <div className="team-onboarding-intro">
+                <span className="panel-kicker">Get started</span>
+                <h2>Bring your team together</h2>
+                <p>Create a shared space for your work, or join a team with an invitation.</p>
+              </div>
+              <div className="team-onboarding-options">
+                <button type="button" className="team-onboarding-option" onClick={() => { setError(''); setOnboardingStep('create'); }}>
+                  <span className="team-onboarding-icon" aria-hidden="true">＋</span>
+                  <span><strong>Create Workspace</strong><small>Set up a shared home for your projects and teammates.</small></span>
+                  <span className="team-onboarding-arrow" aria-hidden="true">→</span>
+                </button>
+                <button type="button" className="team-onboarding-option" onClick={() => { setError(''); setOnboardingStep('join'); }}>
+                  <span className="team-onboarding-icon team-onboarding-icon-join" aria-hidden="true">↗</span>
+                  <span><strong>Join Workspace</strong><small>Use an invitation code or link from your team.</small></span>
+                  <span className="team-onboarding-arrow" aria-hidden="true">→</span>
+                </button>
+              </div>
+            </>}
+
+            {onboardingStep === 'create' && <div className="team-onboarding-card">
+              <button type="button" className="team-back-button" onClick={handleBackFromOnboarding} disabled={saving}>← Back</button>
+              <span className="panel-kicker">Create a shared space</span>
+              <h2>Create your workspace</h2>
+              <p>As the creator, you&apos;ll be the owner and can invite your teammates.</p>
+              <form className="team-onboarding-form" onSubmit={handleCreateWorkspace}>
+                <label htmlFor="new-workspace-name">Workspace name
+                  <input id="new-workspace-name" value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} placeholder="e.g. Product team" maxLength={100} required />
+                </label>
+                <label htmlFor="new-workspace-description">Description <span>(optional)</span>
+                  <textarea id="new-workspace-description" value={workspaceDescription} onChange={(event) => setWorkspaceDescription(event.target.value)} placeholder="What will your team work on together?" maxLength={500} rows={3} />
+                </label>
+                <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Creating workspace…' : 'Create Workspace'}</Button>
+              </form>
+            </div>}
+
+            {onboardingStep === 'join' && <div className="team-onboarding-card">
+              <button type="button" className="team-back-button" onClick={handleBackFromOnboarding} disabled={saving}>← Back</button>
+              <span className="panel-kicker">Join your team</span>
+              <h2>Have an invitation?</h2>
+              <p>Ask a workspace owner or admin to send you an invitation link or code.</p>
+              <form className="team-onboarding-form" onSubmit={(event) => { event.preventDefault(); validateInvitation(inviteCode); }}>
+                <label htmlFor="workspace-invite-code">Invitation code or link
+                  <input id="workspace-invite-code" value={inviteCode} onChange={(event) => {
+                    setInviteCode(event.target.value);
+                    setInviteToken('');
+                    setInvitationPreview(null);
+                    setInvitationStatus('idle');
+                    setInvitationError('');
+                  }} placeholder="Paste an invitation code or link" autoComplete="off" required />
+                </label>
+                <Button type="submit" variant="primary" disabled={invitationStatus === 'checking' || saving}>
+                  {invitationStatus === 'checking' ? 'Checking invitation…' : 'Check invitation'}
+                </Button>
+              </form>
+              {invitationStatus === 'checking' && <div className="team-invite-checking" role="status">Checking invitation…</div>}
+              {invitationError && <div className="team-feedback team-error" role="alert">{invitationError}</div>}
+              {invitationPreview && invitationStatus === 'valid' && <div className="team-invite-preview">
+                <span className="team-invite-preview-mark" aria-hidden="true">✓</span>
+                <div className="team-invite-preview-heading"><span className="panel-kicker">Invitation verified</span><h3>{invitationPreview.workspace_name}</h3></div>
+                <dl>
+                  <div><dt>Invited by</dt><dd>{invitationPreview.inviter_name}</dd></div>
+                  <div><dt>Your role</dt><dd className="team-role-chip">{invitationPreview.role}</dd></div>
+                </dl>
+                <div className="team-onboarding-actions">
+                  <Button type="button" variant="primary" onClick={handleAcceptInvitation} disabled={saving}>{saving ? 'Joining workspace…' : 'Accept & Join'}</Button>
+                  <Button type="button" variant="secondary" onClick={handleBackFromOnboarding} disabled={saving}>Cancel</Button>
+                </div>
+              </div>}
+            </div>}
+
+            {onboardingStep === 'created' && createdWorkspace && <div className="team-onboarding-card team-created-card">
+              <span className="team-onboarding-icon team-created-icon" aria-hidden="true">✓</span>
+              <span className="panel-kicker">Workspace ready</span>
+              <h2>{createdWorkspace.name}</h2>
+              {createdWorkspace.description && <p>{createdWorkspace.description}</p>}
+              <span className="team-role-chip role-owner">Owner</span>
+              <p>Your workspace is ready. Invite your team or start a project.</p>
+              <div className="team-onboarding-actions">
+                <Button type="button" variant="primary" onClick={handleInviteMembersNext}>Invite Members</Button>
+                <Button type="button" variant="secondary" onClick={() => onNavigate('projects')}>Create Project</Button>
+                <Button type="button" variant="secondary" onClick={() => setOnboardingStep(null)}>Open Workspace</Button>
+              </div>
+            </div>}
           </section>
-
-          {!workspaces.length ? <section className="team-empty-state">
-            <span aria-hidden="true">◎</span><h2>No workspaces yet</h2>
-            <p>Create a workspace above, or open an invitation link to join an existing team.</p>
-          </section> : <>
+        ) : <>
             <div className="team-workspace-picker">
               <label htmlFor="workspace-picker">Workspace</label>
               <select id="workspace-picker" value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
@@ -230,7 +382,7 @@ export default function TeamPage({ onNavigate, onLogout, session }) {
                 <article><span>Overdue</span><strong>{workspace.tasks.filter((task) => task.due_at && new Date(task.due_at) < new Date() && !['completed', 'cancelled'].includes(task.status)).length}</strong></article>
               </section>
 
-              {canManage && <section className="team-panel">
+              {canManage && <section className="team-panel" id="workspace-invite-panel">
                 <div className="team-panel-heading"><div><h2>Invite a member</h2><p>Use a one-time invitation link. Email delivery can be connected through a server-side function when one is configured.</p></div></div>
                 <form className="team-invite-form" onSubmit={handleInvite}>
                   <label>Email address<input type="email" required value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="teammate@example.com" /></label>
@@ -316,7 +468,6 @@ export default function TeamPage({ onNavigate, onLogout, session }) {
                   {!workspace.activity.length && <div className="team-empty-inline">Team activity will appear here as people collaborate on projects and tasks.</div>}
                 </div>
               </section>
-            </>}
           </>}
         </>}
       </section>
