@@ -18,6 +18,9 @@
   --green: #4ac7a7;
   --amber: #fbbf69;
   --danger: #f97379;
+  --success-text: #08775d;
+  --warning-text: #9a5b00;
+  --danger-text: #c43f50;
   --shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
   --shadow-strong: 0 26px 80px rgba(31, 64, 115, 0.12);
   --radius: 28px;
@@ -37,6 +40,9 @@
   --muted: #94a3b8;
   --muted-strong: #e2e8f0;
   --blue-soft: #172b4d;
+  --success-text: #6ee7c5;
+  --warning-text: #fcd58a;
+  --danger-text: #fda4af;
   --shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
   --shadow-strong: 0 26px 80px rgba(0, 0, 0, 0.28);
 }
@@ -60,6 +66,13 @@ body {
   background:
     radial-gradient(circle at top left, rgba(79, 140, 255, 0.12), transparent 24%),
     linear-gradient(180deg, #111827 0%, #0f172a 100%);
+}
+
+:root[data-theme='dark'] .glass-card,
+:root[data-theme='dark'] .nav-shell,
+:root[data-theme='dark'] .btn-secondary {
+  background: var(--panel);
+  border-color: var(--line);
 }
 
 button,

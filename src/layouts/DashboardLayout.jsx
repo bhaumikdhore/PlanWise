@@ -4,9 +4,10 @@ import Header from '../components/layout/Header';
 import PlanwiseAnimatedBackground from '../components/common/PlanwiseAnimatedBackground';
 import { getProfile, isProfileComplete } from '../services/profiles/profileService';
 
-export default function DashboardLayout({ children, onNavigate, onLogout, backgroundVariant = 'dashboard' }) {
+export default function DashboardLayout({ children, onNavigate, onLogout, session, backgroundVariant = 'dashboard' }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('planwise-theme') === 'dark');
+  const themeKey = session?.user?.id ? `planwise-auth-theme:${session.user.id}` : 'planwise-auth-theme';
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem(themeKey) === 'dark');
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState('');
 
@@ -34,17 +35,27 @@ export default function DashboardLayout({ children, onNavigate, onLogout, backgr
 
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? 'dark' : 'light';
-    localStorage.setItem('planwise-theme', darkMode ? 'dark' : 'light');
-  }, [darkMode]);
+    localStorage.setItem(themeKey, darkMode ? 'dark' : 'light');
+  }, [darkMode, themeKey]);
+
+  useEffect(() => {
+    setDarkMode(localStorage.getItem(themeKey) === 'dark');
+  }, [themeKey]);
+
+  const navigate = (view) => {
+    setMobileSidebarOpen(false);
+    onNavigate(view);
+  };
 
   return (
     <div className={`dashboard-shell ${mobileSidebarOpen ? 'sidebar-open' : ''}`}>
       <PlanwiseAnimatedBackground variant={backgroundVariant} />
-      <Sidebar onNavigate={onNavigate} onLogout={onLogout} />
+      <button className="sidebar-scrim" type="button" aria-label="Close navigation" onClick={() => setMobileSidebarOpen(false)} />
+      <Sidebar onNavigate={navigate} onLogout={onLogout} />
       <div className="dashboard-main-panel">
         <Header
           onToggleSidebar={() => setMobileSidebarOpen((value) => !value)}
-          onNavigate={onNavigate}
+          onNavigate={navigate}
           onLogout={onLogout}
           darkMode={darkMode}
           onToggleTheme={() => setDarkMode((value) => !value)}

@@ -107,7 +107,7 @@ export default function TasksPage({ onNavigate, onLogout, session }) {
   };
 
   return (
-    <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} backgroundVariant="tasks">
+    <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} session={session} backgroundVariant="tasks">
       <section className="tasks-page">
         <header className="tasks-page-header"><div><span className="panel-kicker">Workspace focus</span><h1>My Tasks</h1><p>Plan the next action, keep priorities visible, and make steady progress.</p></div><Button type="button" variant="primary" onClick={openCreate}>+ Add Task</Button></header>
         {error && <div role="alert">{error}</div>}{success && <div role="status">{success}</div>}

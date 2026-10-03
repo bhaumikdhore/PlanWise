@@ -165,7 +165,7 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
   const monthHeading = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
-    <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} backgroundVariant="dashboard">
+    <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} session={session} backgroundVariant="dashboard">
       <section className="dashboard-page">
         {error && <div role="alert">{error}</div>}
         {loading && <div role="status">Refreshing dashboard data…</div>}

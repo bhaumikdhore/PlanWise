@@ -6362,6 +6362,117 @@
   }
 }
 
+/* Canonical dashboard shell overrides. These intentionally follow older page styles. */
+.sidebar-scrim { display: none; }
+
+:root[data-theme='dark'] .project-page-card,
+:root[data-theme='dark'] .analytics-card,
+:root[data-theme='dark'] .task-page-card,
+:root[data-theme='dark'] .meeting-page-card,
+:root[data-theme='dark'] .calendar-surface,
+:root[data-theme='dark'] .task-modal,
+:root[data-theme='dark'] .project-modal,
+:root[data-theme='dark'] .calendar-modal,
+:root[data-theme='dark'] .meetings-modal {
+  background: var(--panel-strong);
+  border-color: var(--line);
+}
+
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea,
+:root[data-theme='dark'] option {
+  background-color: var(--bg-strong);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+:root[data-theme='dark'] .metric-amber,
+:root[data-theme='dark'] .badge-amber,
+:root[data-theme='dark'] .priority-amber,
+:root[data-theme='dark'] .project-status-on-hold,
+:root[data-theme='dark'] .analytics-summary-icon.amber { color: var(--warning-text); }
+:root[data-theme='dark'] .badge-danger,
+:root[data-theme='dark'] .priority-danger,
+:root[data-theme='dark'] .project-delete,
+:root[data-theme='dark'] .delete-task,
+:root[data-theme='dark'] .calendar-inline-error { color: var(--danger-text); }
+:root[data-theme='dark'] .calendar-notice,
+:root[data-theme='dark'] .google-status-mark.is-connected { color: var(--success-text) !important; }
+
+@media (max-width: 820px) {
+  .dashboard-shell {
+    display: block;
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    max-height: none;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-sidebar {
+    width: min(280px, calc(100vw - 42px));
+    height: 100dvh;
+    padding: 16px 14px;
+    border-radius: 0 20px 20px 0;
+    transition: transform .22s ease;
+    z-index: 80;
+  }
+
+  .dashboard-sidebar.is-collapsed { width: min(280px, calc(100vw - 42px)); flex-basis: auto; }
+  .dashboard-sidebar.is-collapsed .brand-sidebar > span:last-child,
+  .dashboard-sidebar.is-collapsed .sidebar-item > span:last-child,
+  .dashboard-sidebar.is-collapsed .sidebar-meta { display: inline; }
+  .dashboard-sidebar.is-collapsed .sidebar-header { justify-content: space-between; }
+  .dashboard-sidebar.is-collapsed .sidebar-item { justify-content: flex-start; }
+  .sidebar-toggle { display: none; }
+
+  .sidebar-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: rgba(15, 23, 42, .42);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .22s ease;
+  }
+
+  .dashboard-shell.sidebar-open .sidebar-scrim { opacity: 1; pointer-events: auto; }
+  .dashboard-main-panel { height: 100dvh; padding: 10px 12px 16px; overflow: hidden; }
+  .dashboard-topbar { position: relative; z-index: 10; margin-bottom: 12px; }
+  .dashboard-content { padding: 0 2px 24px; gap: 16px; overscroll-behavior: contain; }
+  .dashboard-page, .profile-page, .projects-page, .tasks-page, .calendar-page, .meetings-page, .analytics-page { gap: 16px; padding-bottom: 20px; }
+}
+
+@media (max-width: 640px) {
+  .dashboard-topbar { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px; }
+  .topbar-mobile-menu { grid-column: 1; grid-row: 1; }
+  .topbar-search { grid-column: 2; grid-row: 1; width: auto; min-height: 40px; order: initial; }
+  .topbar-actions { grid-column: 3; grid-row: 1; width: auto; gap: 5px; justify-content: flex-end; }
+  .topbar-actions .profile-box { width: auto; flex: 0 0 auto; padding: 4px; }
+  .profile-chevron, .profile-meta { display: none; }
+  .topbar-actions > .icon-button, .notification-toggle, .topbar-mobile-menu .icon-button { width: 38px; height: 38px; flex-basis: 38px; border-radius: 11px; }
+  .topbar-search kbd { display: none; }
+  .topbar-search input { width: 100%; font-size: .8rem; }
+  .page-banner, .projects-page-header, .tasks-page-header, .calendar-page-header, .meetings-page-header, .analytics-page-header, .profile-page-header, .project-details-header { gap: 12px; }
+  .page-banner > .btn, .projects-page-header > .btn, .tasks-page-header > .btn, .calendar-page-header > .btn, .meetings-page-header > .btn, .analytics-page-header > .btn, .profile-page-header > .btn { width: 100%; }
+  .dashboard-content h1 { font-size: clamp(1.65rem, 8vw, 2.1rem); line-height: 1.05; }
+  .dashboard-content h2 { overflow-wrap: anywhere; }
+  .task-page-card, .meeting-page-card, .project-page-card, .analytics-card, .profile-card { min-width: 0; }
+  .task-page-meta, .project-card-meta, .meeting-card-meta { overflow-wrap: anywhere; }
+}
+
+@media (max-width: 375px) {
+  .dashboard-main-panel { padding-inline: 8px; }
+  .dashboard-topbar { grid-template-columns: 36px minmax(0, 1fr) auto; gap: 5px; }
+  .topbar-actions > .icon-button, .notification-toggle, .topbar-mobile-menu .icon-button { width: 34px; height: 34px; flex-basis: 34px; }
+  .topbar-actions .profile-box { display: none; }
+  .topbar-search { padding-inline: 8px; }
+  .topbar-search .search-icon { font-size: 1rem; }
+  .topbar-search input { font-size: .72rem; }
+}
+
 .profile-completion-banner {
   display: flex;
   align-items: center;

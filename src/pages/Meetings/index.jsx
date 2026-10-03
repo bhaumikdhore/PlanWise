@@ -391,7 +391,7 @@ export default function MeetingsPage({ onNavigate, onLogout, session }) {
     return result;
   }, {});
 
-  return <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} backgroundVariant="dashboard">
+  return <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} session={session} backgroundVariant="dashboard">
     <section className="meetings-page page-transition">
       <header className="meetings-page-header"><div><span className="panel-kicker">Bring the right people together</span><h1>Meetings</h1><p>Plan conversations, capture decisions, and keep the next steps moving.</p></div><Button onClick={() => { setEditingMeeting(null); setFormOpen(true); }}>+ Schedule Meeting</Button></header>
       <div className="meetings-summary-grid">

@@ -533,14 +533,14 @@ export default function ProjectsPage({ onNavigate, onLogout, session, locationPa
   const onEditDetails = () => openEdit(selectedProject);
 
   if (selectedProject) {
-    return <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} backgroundVariant="projects">
+    return <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} session={session} backgroundVariant="projects">
       {loading ? <div className="project-loading" role="status">Loading project…</div> : <><ProjectDetails key={selectedProject.id} project={selectedProject} tasks={tasks.filter((task) => task.projectId === selectedProject.id)} meetings={meetings} user={user} onBack={() => onNavigate('projects')} onEdit={onEditDetails} onSuccess={setPageSuccess} refresh={refresh} />{pageError && <div role="alert">{pageError}</div>}{pageSuccess && <div role="status">{pageSuccess}</div>}</>}
       {formOpen && <ProjectForm project={editingProject} onClose={() => setFormOpen(false)} onSave={handleSave} />}
     </DashboardLayout>;
   }
 
   return (
-    <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} backgroundVariant="projects">
+    <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} session={session} backgroundVariant="projects">
       <section className="projects-page page-transition">
         <header className="projects-page-header"><div><span className="panel-kicker">Your workspace</span><h1>Projects</h1><p>Bring tasks, meetings, files, and people together around the work that matters.</p></div><Button onClick={openCreate}>+ Create Project</Button></header>
         {pageError && <div role="alert">{pageError}</div>}{pageSuccess && <div role="status">{pageSuccess}</div>}

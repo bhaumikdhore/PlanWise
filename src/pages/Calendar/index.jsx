@@ -515,7 +515,7 @@ export default function CalendarPage({ onNavigate, onLogout, session }) {
     </div>
   );
 
-  return <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} backgroundVariant="dashboard">
+  return <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} session={session} backgroundVariant="dashboard">
     <section className="calendar-page page-transition">
       <header className="calendar-page-header"><div><span className="panel-kicker">Make time for what matters</span><h1>Calendar</h1><p>Your plans, project meetings, and events in one place.</p></div><div className="calendar-header-actions"><Button variant="secondary" onClick={() => setIntegrationOpen((open) => !open)} aria-expanded={integrationOpen}>◉ Google Calendar</Button><Button onClick={() => openCreate()}>+ Create event</Button></div></header>
 

@@ -54,7 +54,7 @@ export default function AnalyticsPage({ onNavigate, onLogout, session }) {
   const maxPriority = Math.max(...analytics.priorities.map((item) => item.value), 1);
 
   return (
-    <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} backgroundVariant="analytics">
+    <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} session={session} backgroundVariant="analytics">
       <section className="analytics-page">
         <header className="analytics-page-header"><div><span className="panel-kicker">Performance snapshot</span><h1>Analytics</h1><p>Understand your productivity patterns and make your next plan more intentional.</p></div><Button type="button" variant="secondary" onClick={() => onNavigate('tasks')}>View Tasks</Button></header>
         {error && <div role="alert">{error}</div>}{loading && <div role="status">Loading analytics…</div>}

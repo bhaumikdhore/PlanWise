@@ -91,7 +91,7 @@ export default function ProfilePage({ onNavigate, onLogout, session }) {
   const initials = (profile?.fullName || profile?.email || 'U').split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} backgroundVariant="profile">
+    <DashboardLayout onNavigate={onNavigate} onLogout={onLogout} session={session} backgroundVariant="profile">
       <section className="profile-page">
         <div className="profile-page-header">
           <div><button type="button" className="back-button" onClick={() => onNavigate('dashboard')}>← Back to Dashboard</button><h1>Profile</h1><p>Manage your personal information, workspace identity and account preferences.</p></div>

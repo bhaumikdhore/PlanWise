@@ -115,8 +115,13 @@ export default function App() {
 
   const logout = useCallback(async () => {
     await signOut();
+    document.documentElement.dataset.theme = 'light';
     navigate('login', true);
   }, [navigate]);
+
+  useEffect(() => {
+    if (!authLoading && !session) document.documentElement.dataset.theme = 'light';
+  }, [authLoading, session]);
 
   const currentView = useMemo(() => {
     if (activeView === views.login) return <LoginPage onNavigate={navigate} />;
