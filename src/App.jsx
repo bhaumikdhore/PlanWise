@@ -165,7 +165,7 @@ export default function App() {
     if (activeView === views.terms) return <TermsPage onNavigate={navigate} />;
     if (activeView === views.home) return <HomePage onNavigate={navigate} />;
     return <DashboardPage onNavigate={navigate} />;
-  }, [activeView, locationPath]);
+  }, [activeView, locationPath, session, logout]);
 
   if (authLoading) return null;
   const protectedViews = [views.dashboard, views.profile, views.tasks, views.analytics, views.projects, views.calendar, views.meetings, views.team];

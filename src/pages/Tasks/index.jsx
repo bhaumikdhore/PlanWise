@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import Avatar from '../../components/common/Avatar';
 import Button from '../../components/common/Button';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import TaskAIPanel from '../../components/ai/TaskAIPanel';
@@ -11,6 +12,10 @@ const priorities = ['Urgent', 'High', 'Medium', 'Low'];
 const taskStatuses = ['todo', 'in_progress', 'completed'];
 const taskStatusLabels = { todo: 'To Do', in_progress: 'In Progress', completed: 'Completed', in_review: 'In Review', blocked: 'Blocked', cancelled: 'Cancelled' };
 const priorityRank = { Urgent: 4, High: 3, Medium: 2, Low: 1 };
+const initialsFor = (profile, fallback) => {
+  const name = profile?.full_name || profile?.email || fallback || 'U';
+  return name.split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+};
 
 function dateKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
