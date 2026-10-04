@@ -32,7 +32,7 @@ export default function Sidebar({ onNavigate, onLogout }) {
       <div className="sidebar-footer">
         {!collapsed && (
           <div className="sidebar-meta">
-            <button type="button" className="meta-link">Settings</button>
+            <button type="button" className="meta-link" onClick={() => onNavigate('profile')}>Settings</button>
             <button type="button" className="meta-link">Help &amp; Support</button>
             <button type="button" className="meta-link logout-link" onClick={onLogout}>Logout</button>
           </div>

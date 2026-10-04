@@ -1,0 +1,542 @@
+@media (max-width: 500px) {
+  .landing-shell {
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  .landing-shell .container {
+    width: calc(100% - 32px);
+    max-width: var(--container);
+  }
+
+  .landing-shell .site-header {
+    padding: 8px 0;
+  }
+
+  .landing-shell .nav-shell {
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 18px;
+  }
+
+  .landing-shell .brand {
+    min-width: 0;
+    gap: 9px;
+    font-size: 1rem;
+  }
+
+  .landing-shell .brand-mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  .landing-shell .mobile-menu-button {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .landing-shell .nav-shell .nav-actions {
+    display: none;
+  }
+
+  .landing-shell .nav-shell.mobile-open .nav-actions {
+    display: flex;
+    order: 4;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 14px;
+  }
+
+  .landing-shell .nav-shell.mobile-open .nav-actions .btn {
+    min-height: 44px;
+  }
+
+  .landing-shell .nav-shell.mobile-open .main-nav {
+    order: 3;
+  }
+
+  .landing-shell .hero-section {
+    padding: 34px 0 12px;
+  }
+
+  .landing-shell main > section {
+    scroll-margin-top: 88px;
+  }
+
+  .landing-shell .hero-shell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  .landing-shell .hero-copy {
+    min-width: 0;
+  }
+
+  .landing-shell .hero-copy .eyebrow {
+    max-width: 100%;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+  }
+
+  .landing-shell .hero-copy h1 {
+    max-width: 100%;
+    margin-top: 16px;
+    font-size: clamp(2.35rem, 10.6vw, 3.25rem);
+    line-height: 1;
+    letter-spacing: -0.075em;
+    overflow-wrap: break-word;
+  }
+
+  .landing-shell .hero-copy p {
+    max-width: 42rem;
+    margin-top: 14px;
+    font-size: clamp(0.98rem, 4vw, 1.08rem);
+    line-height: 1.65;
+  }
+
+  .landing-shell .hero-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin-top: 22px;
+  }
+
+  .landing-shell .hero-actions .btn,
+  .landing-shell .cta-actions .btn {
+    width: 100%;
+    min-height: 52px;
+  }
+
+  .landing-shell .trust-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 22px;
+  }
+
+  .landing-shell .trust-row > div {
+    min-width: 0;
+  }
+
+  .landing-shell .trust-row strong {
+    font-size: clamp(1.15rem, 5vw, 1.3rem);
+  }
+
+  .landing-shell .trust-row span {
+    display: block;
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  .landing-shell .hero-visual {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    min-height: 0;
+    padding: 0 1px;
+  }
+
+  .landing-shell .dashboard-frame {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    padding: clamp(12px, 4vw, 18px);
+    border-radius: 22px;
+    transform: none;
+    animation: none;
+  }
+
+  .landing-shell .hero-dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    min-height: 0;
+  }
+
+  .landing-shell .mini-sidebar {
+    display: none;
+  }
+
+  .landing-shell .mini-main {
+    min-width: 0;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .landing-shell .top-summary,
+  .landing-shell .mini-panels,
+  .landing-shell .mini-panel,
+  .landing-shell .task-row {
+    min-width: 0;
+  }
+
+  .landing-shell .mini-panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .landing-shell .mini-panel {
+    padding: 12px 10px;
+  }
+
+  .landing-shell .mini-panel strong {
+    font-size: clamp(0.95rem, 4.4vw, 1.15rem);
+    overflow-wrap: anywhere;
+  }
+
+  .landing-shell .mini-panel ul {
+    gap: 6px;
+  }
+
+  .landing-shell .task-row {
+    grid-template-columns: 10px minmax(0, 1fr) auto;
+    gap: 7px;
+    font-size: 0.78rem;
+  }
+
+  .landing-shell .task-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .landing-shell .hero-floating-card {
+    position: relative;
+    inset: auto;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .landing-shell .hero-floating-card .mini-card-header {
+    gap: 6px;
+    font-size: 0.64rem;
+  }
+
+  .landing-shell .calendar-mini {
+    gap: 4px;
+  }
+
+  .landing-shell .calendar-day {
+    height: 26px;
+    font-size: 0.62rem;
+  }
+
+  .landing-shell .calendar-event-row {
+    gap: 7px;
+  }
+
+  .landing-shell .calendar-event-row strong,
+  .landing-shell .hero-floating-card strong {
+    font-size: 0.76rem;
+  }
+
+  .landing-shell .hero-floating-card small {
+    font-size: 0.68rem;
+  }
+
+  .landing-shell .stats-section,
+  .landing-shell .feature-section,
+  .landing-shell .process-section,
+  .landing-shell .showcase-section,
+  .landing-shell .cta-section {
+    padding: clamp(38px, 11vw, 52px) 0;
+  }
+
+  .landing-shell .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .landing-shell .stat-card {
+    min-height: 0;
+    gap: 9px;
+    padding: 15px 13px;
+    border-radius: 18px;
+  }
+
+  .landing-shell .stat-card-top {
+    gap: 7px;
+  }
+
+  .landing-shell .stat-icon {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .landing-shell .trend-badge {
+    padding: 4px 6px;
+    font-size: 0.62rem;
+  }
+
+  .landing-shell .stat-card strong {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+  }
+
+  .landing-shell .stat-card span,
+  .landing-shell .stat-card small {
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  .landing-shell .section-heading {
+    margin-bottom: 24px;
+    padding-inline: 2px;
+  }
+
+  .landing-shell .section-heading h2 {
+    margin-top: 14px;
+    font-size: clamp(1.85rem, 8.4vw, 2.45rem);
+    line-height: 1.08;
+    letter-spacing: -0.06em;
+    overflow-wrap: break-word;
+  }
+
+  .landing-shell .section-heading p {
+    margin-top: 12px;
+    font-size: 0.96rem;
+    line-height: 1.6;
+  }
+
+  .landing-shell .features-grid,
+  .landing-shell .process-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .landing-shell .feature-card,
+  .landing-shell .process-step {
+    min-width: 0;
+    padding: 20px 18px;
+    border-radius: 20px;
+  }
+
+  .landing-shell .feature-card h3,
+  .landing-shell .process-step h3 {
+    margin-top: 14px;
+    font-size: clamp(1.2rem, 5.5vw, 1.4rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .landing-shell .feature-card p,
+  .landing-shell .process-step p {
+    margin-top: 9px;
+    font-size: 0.94rem;
+    line-height: 1.6;
+  }
+
+  .landing-shell .showcase-section {
+    padding-bottom: 32px;
+  }
+
+  .landing-shell .showcase-window {
+    min-width: 0;
+    padding: 12px;
+    border-radius: 22px;
+    overflow: visible;
+  }
+
+  .landing-shell .showcase-toolbar {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .landing-shell .toolbar-actions {
+    min-width: 0;
+    gap: 6px 10px;
+    font-size: 0.68rem;
+  }
+
+  .landing-shell .showcase-viewport {
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .landing-shell .showcase-dashboard,
+  .landing-shell .showcase-main,
+  .landing-shell .showcase-card,
+  .landing-shell .showcase-floating-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .landing-shell .showcase-dashboard {
+    min-height: 0;
+    gap: 12px;
+  }
+
+  .landing-shell .showcase-sidebar {
+    gap: 8px;
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .landing-shell .sidebar-block {
+    min-width: 0;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .landing-shell .sidebar-block span {
+    overflow-wrap: anywhere;
+  }
+
+  .landing-shell .showcase-main {
+    gap: 12px;
+  }
+
+  .landing-shell .showcase-top-row,
+  .landing-shell .showcase-bottom-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .landing-shell .showcase-card {
+    padding: 15px;
+    border-radius: 18px;
+  }
+
+  .landing-shell .showcase-floating-card {
+    padding: 14px;
+    border-radius: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .landing-shell .showcase-floating-card strong {
+    font-size: 0.98rem;
+  }
+
+  .landing-shell .cta-card {
+    align-items: stretch;
+    gap: 20px;
+    padding: 22px 18px;
+    border-radius: 22px;
+  }
+
+  .landing-shell .cta-card h2 {
+    font-size: clamp(1.8rem, 8.2vw, 2.4rem);
+    line-height: 1.08;
+    overflow-wrap: break-word;
+  }
+
+  .landing-shell .cta-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    gap: 10px;
+  }
+
+  .landing-shell .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 16px;
+  }
+
+  .landing-shell .footer-brand-block {
+    grid-column: 1 / -1;
+  }
+
+  .landing-shell .footer-column {
+    min-width: 0;
+  }
+
+  .landing-shell .footer-column h3 {
+    margin-bottom: 12px;
+  }
+
+  .landing-shell .footer-column a,
+  .landing-shell .footer-brand-block p {
+    overflow-wrap: anywhere;
+  }
+
+  .landing-shell .footer-bottom {
+    justify-content: flex-start;
+    gap: 10px 18px;
+    font-size: 0.8rem;
+  }
+
+  .landing-shell .planning-calendar,
+  .landing-shell .planning-checklist,
+  .landing-shell .planning-progress,
+  .landing-shell .planning-goal,
+  .landing-shell .planning-timeline,
+  .landing-shell .planning-connection,
+  .landing-shell .planning-icon {
+    display: none;
+  }
+
+  .landing-shell .planning-orb {
+    width: 220px;
+    height: 220px;
+    opacity: 0.16;
+  }
+}
+
+@media (max-width: 359px) {
+  .landing-shell .container {
+    width: calc(100% - 24px);
+  }
+
+  .landing-shell .nav-shell {
+    padding-inline: 10px;
+  }
+
+  .landing-shell .hero-copy h1 {
+    font-size: clamp(2.2rem, 10.5vw, 2.55rem);
+  }
+
+  .landing-shell .dashboard-frame {
+    padding: 10px;
+  }
+
+  .landing-shell .mini-main {
+    padding: 10px;
+  }
+
+  .landing-shell .hero-floating-card {
+    padding: 10px;
+  }
+
+  .landing-shell .stat-card {
+    padding-inline: 11px;
+  }
+}
+
+@media (min-width: 375px) and (max-width: 389px) {
+  .landing-shell .hero-section {
+    padding-top: 38px;
+  }
+
+  .landing-shell .hero-visual {
+    gap: 12px;
+  }
+}
+
+@media (min-width: 390px) and (max-width: 429px) {
+  .landing-shell .hero-copy h1 {
+    font-size: clamp(2.6rem, 10.3vw, 2.95rem);
+  }
+
+  .landing-shell .stat-card {
+    padding: 17px 15px;
+  }
+}
+
+@media (min-width: 430px) and (max-width: 500px) {
+  .landing-shell .hero-shell {
+    gap: 32px;
+  }
+
+  .landing-shell .hero-copy h1 {
+    max-width: 11ch;
+    font-size: clamp(2.8rem, 9.5vw, 3.25rem);
+  }
+
+  .landing-shell .stats-grid {
+    gap: 12px;
+  }
+}

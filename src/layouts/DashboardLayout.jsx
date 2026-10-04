@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import PlanwiseAnimatedBackground from '../components/common/PlanwiseAnimatedBackground';
-import { getProfile, isProfileComplete } from '../services/profiles/profileService';
+import { getProfile, isProfileComplete, updateProfilePreferences } from '../services/profiles/profileService';
+import { applyThemePreference, getThemePreference, subscribeToThemeChanges } from '../services/preferences/themeService';
 
 export default function DashboardLayout({ children, onNavigate, onLogout, session, backgroundVariant = 'dashboard' }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const themeKey = session?.user?.id ? `planwise-auth-theme:${session.user.id}` : 'planwise-auth-theme';
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem(themeKey) === 'dark');
+  const userId = session?.user?.id;
+  const [themePreference, setThemePreference] = useState(() => getThemePreference(userId));
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState('');
 
@@ -17,6 +18,9 @@ export default function DashboardLayout({ children, onNavigate, onLogout, sessio
       if (!active) return;
       setProfile(currentProfile);
       setProfileError('');
+      const preference = currentProfile.preferences?.theme || getThemePreference(userId);
+      setThemePreference(preference);
+      applyThemePreference(preference, userId, { persist: true });
     }).catch((error) => {
       if (active) setProfileError(error.message || 'Could not load your profile.');
     });
@@ -24,6 +28,7 @@ export default function DashboardLayout({ children, onNavigate, onLogout, sessio
     const handleProfileUpdate = (event) => {
       setProfile(event.detail);
       setProfileError('');
+      if (event.detail.preferences?.theme) setThemePreference(event.detail.preferences.theme);
     };
     window.addEventListener('planwise-profile-updated', handleProfileUpdate);
 
@@ -31,16 +36,29 @@ export default function DashboardLayout({ children, onNavigate, onLogout, sessio
       active = false;
       window.removeEventListener('planwise-profile-updated', handleProfileUpdate);
     };
-  }, []);
+  }, [userId]);
+
+  useEffect(() => subscribeToThemeChanges(setThemePreference), []);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = darkMode ? 'dark' : 'light';
-    localStorage.setItem(themeKey, darkMode ? 'dark' : 'light');
-  }, [darkMode, themeKey]);
+    applyThemePreference(themePreference, userId);
+  }, [themePreference, userId]);
 
-  useEffect(() => {
-    setDarkMode(localStorage.getItem(themeKey) === 'dark');
-  }, [themeKey]);
+  const toggleTheme = useCallback(async () => {
+    const nextPreference = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    const previousPreference = profile?.preferences?.theme || getThemePreference(userId);
+    setThemePreference(nextPreference);
+    applyThemePreference(nextPreference, userId, { persist: true });
+    try {
+      const updatedProfile = await updateProfilePreferences({ theme: nextPreference });
+      setProfile(updatedProfile);
+      setProfileError('');
+    } catch (error) {
+      setThemePreference(previousPreference);
+      applyThemePreference(previousPreference, userId, { persist: true });
+      setProfileError(`Theme could not be saved: ${error.message || 'Unknown error.'}`);
+    }
+  }, [profile, userId]);
 
   const navigate = (view) => {
     setMobileSidebarOpen(false);
@@ -57,8 +75,8 @@ export default function DashboardLayout({ children, onNavigate, onLogout, sessio
           onToggleSidebar={() => setMobileSidebarOpen((value) => !value)}
           onNavigate={navigate}
           onLogout={onLogout}
-          darkMode={darkMode}
-          onToggleTheme={() => setDarkMode((value) => !value)}
+          darkMode={document.documentElement.dataset.theme === 'dark'}
+          onToggleTheme={toggleTheme}
           profile={profile}
           profileError={profileError}
           profileIncomplete={profile !== null && !isProfileComplete(profile)}

@@ -1,17 +1,18 @@
 import Card from '../common/Card';
 
 const priorityTone = {
+  Urgent: 'danger',
   High: 'danger',
   Medium: 'amber',
   Low: 'green'
 };
 
-export default function TaskPanel({ tasks, onToggleTask }) {
+export default function TaskPanel({ tasks, onToggleTask, onViewAll }) {
   return (
     <Card className="panel-card task-panel">
       <div className="panel-header task-header">
         <h3>Upcoming Tasks</h3>
-        <button type="button" className="text-btn small">View All</button>
+        <button type="button" className="text-btn small" onClick={onViewAll}>View All</button>
       </div>
 
       <div className="task-list">

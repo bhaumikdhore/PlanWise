@@ -44,7 +44,7 @@ export default function Header({ onToggleSidebar, onNavigate, onLogout, darkMode
 
         <div className="profile-menu-wrap">
         <button type="button" className="profile-box" onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen}>
-          <Avatar initials={getInitials(profile?.full_name || profile?.email)} active />
+          <Avatar initials={getInitials(profile?.full_name || profile?.email)} src={profile?.avatar_url} alt={`${name} profile photo`} active />
           <div className="profile-meta">
             <strong>{name}</strong>
             <span>{role}</span>
@@ -55,7 +55,7 @@ export default function Header({ onToggleSidebar, onNavigate, onLogout, darkMode
           <div className="profile-dropdown">
             <div className="profile-dropdown-summary"><strong>{name}</strong><span>{role}</span>{profile?.email && <small>{profile.email}</small>}{profileError && <small role="alert">{profileError}</small>}</div>
             <button type="button" onClick={() => { onNavigate('profile'); setProfileOpen(false); }}>👤 My Profile</button>
-            <button type="button">⚙ Account Settings</button>
+            <button type="button" onClick={() => { onNavigate('profile'); setProfileOpen(false); }}>⚙ Account Settings</button>
             <button type="button" className="profile-logout" onClick={onLogout}>🚪 Log Out</button>
           </div>
         )}

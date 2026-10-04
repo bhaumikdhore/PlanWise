@@ -9,8 +9,9 @@ import TeamMembers from '../../components/dashboard/TeamMembers';
 import UpcomingMeetings from '../../components/dashboard/UpcomingMeetings';
 import QuickActions from '../../components/dashboard/QuickActions';
 import AIAssistant from '../../components/dashboard/AIAssistant';
+import MyAIPlan from '../../components/dashboard/MyAIPlan';
 import { getProjects } from '../../services/projects/projectService';
-import { getTasks, transitionTaskStatus } from '../../services/tasks/taskService';
+import { getTasks, subscribeToTaskChanges, transitionTaskStatus } from '../../services/tasks/taskService';
 import { getMeetings } from '../../services/meetings/meetingService';
 import { getProjectGoals } from '../../services/goals/projectGoalService';
 import { getProfile, isProfileComplete } from '../../services/profiles/profileService';
@@ -94,6 +95,28 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
   }, [session.user.id]);
 
   useEffect(() => {
+    let active = true;
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = subscribeToTaskChanges(() => {
+        getTasks().then((nextTasks) => {
+          if (active) setTasks(nextTasks);
+        }).catch((taskError) => {
+          if (active) setError(taskError.message || 'Could not refresh task updates.');
+        });
+      }, (subscriptionError) => {
+        if (active) setError(subscriptionError.message);
+      });
+    } catch (subscriptionError) {
+      setError(subscriptionError.message || 'Live task updates are unavailable.');
+    }
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [session.user.id]);
+
+  useEffect(() => {
     const interval = window.setInterval(() => {
       createDeadlineNotifications().catch((deadlineError) => setError(deadlineError.message || 'Could not check upcoming task deadlines.'));
     }, 60 * 60 * 1000);
@@ -101,7 +124,8 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
   }, [session.user.id]);
 
   const today = dateKey(new Date());
-  const myTasks = useMemo(() => tasks.filter((task) => task.assigneeIds?.includes(session.user.id)), [tasks, session.user.id]);
+  const myTasks = useMemo(() => tasks.filter((task) => task.assigneeIds?.includes(session.user.id)
+    || (!task.projectId && task.createdBy === session.user.id)), [tasks, session.user.id]);
   const upcomingTasks = useMemo(() => myTasks
     .filter((task) => ['todo', 'in_progress'].includes(task.status))
     .sort((a, b) => (a.dueDate || '9999-12-31').localeCompare(b.dueDate || '9999-12-31'))
@@ -141,6 +165,10 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
     tone: 'purple'
   }));
   const primaryWorkspace = collaborationWorkspaces[0];
+  const aiCreatableProjects = projects.filter((project) => project.ownerId === session.user.id
+    || project.memberRoles?.some((member) => member.userId === session.user.id && member.role !== 'viewer')
+    || collaborationWorkspaces.some((workspace) => workspace.id === project.workspaceId
+      && workspace.members.some((member) => member.user_id === session.user.id && member.role !== 'viewer')));
   const profileMap = new Map(collaboratorProfiles.map((member) => [member.id, member]));
   const memberMap = new Map([[session.user.id, {
     id: session.user.id,
@@ -193,6 +221,14 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
       setSuccess(status === 'in_review' ? 'Submitted for Review.' : 'Task completed.');
     } catch (updateError) {
       setError(updateError.message || 'Could not update this task.');
+    }
+  };
+  const refreshTasksAfterAiCreate = async () => {
+    try {
+      setTasks(await getTasks());
+      setSuccess('Selected AI-planned tasks are ready in your task list.');
+    } catch (taskError) {
+      setError(taskError.message || 'Tasks were created, but the dashboard could not refresh.');
     }
   };
 
@@ -255,7 +291,7 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
 
         <div className="content-grid analytics-grid">
           <ProjectAnalytics data={analyticsData} goals={goalSummary} />
-          <TaskPanel tasks={upcomingTasks} onToggleTask={toggleTask} />
+          <TaskPanel tasks={upcomingTasks} onToggleTask={toggleTask} onViewAll={() => onNavigate('tasks')} />
         </div>
 
         <div className="content-grid project-grid">
@@ -278,7 +314,8 @@ export default function DashboardPage({ onNavigate, onLogout, session }) {
             <QuickActions actions={quickActions} />
           </div>
         </div>
-        <AIAssistant session={session} />
+        <MyAIPlan onNavigate={onNavigate} />
+        <AIAssistant session={session} projects={aiCreatableProjects} onTasksCreated={refreshTasksAfterAiCreate} />
       </section>
     </DashboardLayout>
   );

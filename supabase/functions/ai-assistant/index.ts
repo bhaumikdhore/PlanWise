@@ -1,173 +1,322 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from "npm:@supabase/supabase-js@2.117.2";
+import { buildAgentContext } from "../_shared/ai/context.ts";
+import { AiConfigurationError, AiProviderError } from "../_shared/ai/config.ts";
+import { buildDailyPlan } from "../_shared/ai/dailyPlan.ts";
+import { orchestrateAgent } from "../_shared/ai/orchestrator.ts";
+import { agentNames } from "../_shared/ai/types.ts";
+import type {
+  AgentName,
+  AgentRequest,
+  ConversationTurn,
+} from "../_shared/ai/types.ts";
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const openAiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
-const model = Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini';
-const admin = supabaseUrl && serviceKey
-  ? createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
-  : null;
+const allowedHeaders =
+  "authorization, apikey, content-type, x-client-info, x-supabase-api-version";
 
 class ApiError extends Error {
-  status: number;
-  constructor(status: number, message: string) {
+  constructor(readonly status: number, message: string) {
     super(message);
-    this.status = status;
+    this.name = "ApiError";
   }
 }
 
-function json(body: unknown, status = 200) {
+function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info, x-supabase-api-version',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Cache-Control': 'no-store',
-      'Content-Type': 'application/json'
-    }
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": allowedHeaders,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Cache-Control": "no-store",
+      "Content-Type": "application/json",
+    },
   });
 }
 
-async function authenticate(request: Request) {
-  if (!admin) throw new ApiError(503, 'AI service is not configured with Supabase server credentials.');
-  const token = request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '');
-  if (!token) throw new ApiError(401, 'Sign in to use Planwise AI.');
-  const { data, error } = await admin.auth.getUser(token);
-  if (error || !data.user) throw new ApiError(401, 'Your Planwise session is invalid or expired.');
-  return data.user;
-}
+function getAuthenticatedClient(request: Request) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ||
+    Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  const authorization = request.headers.get("Authorization");
+  const token = authorization?.match(/^Bearer\s+(\S+)$/i)?.[1];
 
-async function assertProjectAccess(projectId: string | null, userId: string) {
-  if (!projectId) return;
-  const { data, error } = await admin!.rpc('is_project_member', {
-    p_project_id: projectId,
-    p_user_id: userId
+  if (!token) throw new ApiError(401, "Sign in to use Planwise AI.");
+  if (!supabaseUrl || !anonKey) {
+    throw new ApiError(503, "AI service is not configured.");
+  }
+
+  const supabase = createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  if (error) throw new ApiError(500, 'Could not verify access to the selected project.');
-  if (!data) throw new ApiError(403, 'You do not have access to the selected project.');
+
+  return { supabase, token };
 }
 
 async function handleRequest(request: Request) {
-  if (!admin) throw new ApiError(503, 'AI service is not configured with Supabase server credentials.');
-  const user = await authenticate(request);
-  if (!openAiKey) throw new ApiError(503, 'AI service is not configured. Add the OPENAI_API_KEY Edge Function secret.');
-  let input: { conversationId?: string; projectId?: string | null; message?: string };
+  const { supabase, token } = getAuthenticatedClient(request);
+  const { data: authData, error: authError } = await supabase.auth.getUser(
+    token,
+  );
+  if (authError || !authData.user) {
+    throw new ApiError(401, "Your Planwise session is invalid or expired.");
+  }
+  let input: unknown;
   try {
-    input = await request.json();
-  } catch {
-    throw new ApiError(400, 'Request body must be valid JSON.');
+    const bodyText = await request.text();
+    if (bodyText.length > 16_384) {
+      throw new ApiError(413, "Request body is too large.");
+    }
+    input = JSON.parse(bodyText);
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(400, "Request body must be valid JSON.");
   }
 
-  const message = typeof input.message === 'string' ? input.message.trim() : '';
-  if (!message) throw new ApiError(400, 'Enter a message before sending.');
-  if (message.length > 4000) throw new ApiError(413, 'Messages must be 4,000 characters or fewer.');
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new ApiError(400, "Request body must be a JSON object.");
+  }
 
-  let conversationId = input.conversationId || '';
-  let projectId = input.projectId || null;
-  let isNewConversation = false;
+  const body = input as Record<string, unknown>;
+  const allowedFields = new Set([
+    "message",
+    "agent",
+    "conversationId",
+    "taskId",
+    "projectId",
+    "action",
+  ]);
+  if (Object.keys(body).some((key) => !allowedFields.has(key))) {
+    throw new ApiError(400, "The request contains unsupported fields.");
+  }
 
+  const message = typeof body.message === "string" ? body.message.trim() : "";
+  if (!message) throw new ApiError(400, "Enter a message before sending.");
+  if (message.length > 4000) {
+    throw new ApiError(413, "Messages must be 4,000 characters or fewer.");
+  }
+
+  const agent = body.agent === undefined ? "personal_assistant" : body.agent;
+  if (
+    typeof agent !== "string" || !agentNames.includes(agent as AgentName) ||
+    !["personal_assistant", "task_planner"].includes(agent)
+  ) {
+    throw new ApiError(400, "This AI agent is not available.");
+  }
+  const action = body.action === undefined ? "message" : body.action;
+  if (action !== "message" && action !== "daily_plan") {
+    throw new ApiError(400, "Choose a supported AI action.");
+  }
+  if (action === "daily_plan" && agent !== "personal_assistant") {
+    throw new ApiError(400, "Daily plans use the personal assistant.");
+  }
+
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const conversationId =
+    body.conversationId === undefined || body.conversationId === null
+      ? undefined
+      : body.conversationId;
+  const taskId = body.taskId === undefined || body.taskId === null
+    ? undefined
+    : body.taskId;
+  const requestedProjectId =
+    body.projectId === undefined || body.projectId === null
+      ? undefined
+      : body.projectId;
+  if (
+    (conversationId !== undefined &&
+      (typeof conversationId !== "string" ||
+        !uuidPattern.test(conversationId))) ||
+    (taskId !== undefined &&
+      (typeof taskId !== "string" || !uuidPattern.test(taskId))) ||
+    (requestedProjectId !== undefined &&
+      (typeof requestedProjectId !== "string" ||
+        !uuidPattern.test(requestedProjectId)))
+  ) {
+    throw new ApiError(400, "A request identifier is invalid.");
+  }
+
+  const context = await buildAgentContext(supabase, authData.user, {
+    taskId: taskId as string | undefined,
+  });
+  let projectId = requestedProjectId as string | undefined;
+  if (context.currentTask) {
+    if (projectId && projectId !== context.currentTask.projectId) {
+      throw new ApiError(
+        400,
+        "The task does not belong to the selected project.",
+      );
+    }
+    projectId = context.projects.some((project) =>
+        project.id === context.currentTask?.projectId
+      )
+      ? context.currentTask.projectId || undefined
+      : undefined;
+  }
+
+  let conversationHistory: ConversationTurn[] = [];
   if (conversationId) {
-    const { data: conversation, error } = await admin.from('ai_conversations')
-      .select('id,user_id,project_id,title')
-      .eq('id', conversationId)
-      .eq('user_id', user.id)
+    const { data: conversation, error: conversationError } = await supabase
+      .from("ai_conversations")
+      .select("id,project_id")
+      .eq("id", conversationId)
       .maybeSingle();
-    if (error) throw new ApiError(500, 'Could not load this conversation.');
-    if (!conversation) throw new ApiError(404, 'Conversation not found.');
-    if (projectId && projectId !== conversation.project_id) throw new ApiError(400, 'A conversation cannot be moved to another project.');
-    projectId = conversation.project_id;
-  } else {
-    const title = message.replace(/\s+/g, ' ').slice(0, 72);
-    const { data: conversation, error } = await admin.from('ai_conversations')
-      .insert({ user_id: user.id, project_id: projectId, title: title || 'New conversation' })
-      .select('id')
-      .single();
-    if (error) throw new ApiError(500, 'Could not create a conversation.');
-    conversationId = conversation.id;
-    isNewConversation = true;
-  }
-  await assertProjectAccess(projectId, user.id);
-
-  let history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
-  if (!isNewConversation) {
-    const { data, error } = await admin.from('ai_messages')
-      .select('role,content')
-      .eq('conversation_id', conversationId)
-      .in('role', ['user', 'assistant'])
-      .order('created_at', { ascending: false })
+    if (conversationError) {
+      throw new ApiError(500, "Could not load this AI conversation.");
+    }
+    if (!conversation) {
+      throw new ApiError(404, "This AI conversation is unavailable.");
+    }
+    if (projectId && projectId !== conversation.project_id) {
+      throw new ApiError(
+        400,
+        "Start a new conversation to change project context.",
+      );
+    }
+    projectId = conversation.project_id || undefined;
+    const { data: messages, error: messagesError } = await supabase.from(
+      "ai_messages",
+    )
+      .select("role,content,metadata")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: false })
       .limit(12);
-    if (error) throw new ApiError(500, 'Could not load conversation history.');
-    history = data.reverse().map((row) => ({ role: row.role, content: row.content }));
+    if (messagesError) {
+      throw new ApiError(500, "Could not load this AI conversation.");
+    }
+    conversationHistory = (messages || []).reverse()
+      .filter((item) => item.role === "user" || item.role === "assistant")
+      .map((item) => {
+        const metadata = item.metadata && typeof item.metadata === "object"
+          ? item.metadata as Record<string, unknown>
+          : {};
+        const taskPlan = item.role === "assistant" && metadata.taskPlan &&
+            typeof metadata.taskPlan === "object"
+          ? metadata.taskPlan as Record<string, unknown>
+          : null;
+        const contextTurn: Record<string, unknown> = {
+          message: String(item.content),
+        };
+        if (taskPlan) {
+          contextTurn.taskPlan = {
+            title: taskPlan.title,
+            subtasks: Array.isArray(taskPlan.subtasks)
+              ? taskPlan.subtasks.slice(0, 20).map((subtask) => {
+                const row = subtask && typeof subtask === "object"
+                  ? subtask as Record<string, unknown>
+                  : {};
+                return { title: row.title, dependencies: row.dependencies };
+              })
+              : [],
+            recommendedOrder: taskPlan.recommendedOrder,
+          };
+        }
+        const dailyPlan = item.role === "assistant" && metadata.dailyPlan &&
+            typeof metadata.dailyPlan === "object"
+          ? metadata.dailyPlan as Record<string, unknown>
+          : null;
+        if (dailyPlan) contextTurn.dailyPlan = dailyPlan;
+        const content = taskPlan || dailyPlan
+          ? JSON.stringify(contextTurn)
+          : String(item.content);
+        return {
+          role: item.role as "user" | "assistant",
+          content: content.slice(0, 4000),
+        };
+      });
   }
 
-  let response: Response;
-  try {
-    response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openAiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: 'You are Planwise AI, a concise project-planning assistant. Answer using only the information in this conversation. Do not claim to have inspected the user’s Planwise workspace.' },
-          ...history,
-          { role: 'user', content: message }
-        ],
-        max_tokens: 600,
-        temperature: 0.4
-      })
+  if (
+    projectId && !context.projects.some((project) => project.id === projectId)
+  ) {
+    throw new ApiError(403, "You do not have access to this project.");
+  }
+  if (agent === "task_planner" && projectId) {
+    const project = context.projects.find((item) => item.id === projectId);
+    const projectRole = context.projectMembership.find((member) =>
+      member.projectId === projectId && member.userId === authData.user.id
+    )?.role;
+    const workspaceRole = context.workspaces.find((workspace) =>
+      workspace.id === project?.workspaceId
+    )?.role;
+    const canContribute = project?.ownerId === authData.user.id ||
+      (projectRole && projectRole !== "viewer") ||
+      (workspaceRole && workspaceRole !== "viewer");
+    if (!canContribute) {
+      throw new ApiError(403, "You cannot create tasks in this project.");
+    }
+  }
+  if (
+    agent === "task_planner" && context.currentTask?.projectId && !projectId
+  ) {
+    throw new ApiError(403, "You cannot create tasks in this project.");
+  }
+
+  context.conversationHistory = conversationHistory;
+  const requestPayload: AgentRequest = {
+    agent: agent as AgentName,
+    message,
+    conversationId: conversationId as string | undefined,
+    taskId: taskId as string | undefined,
+    projectId: projectId || null,
+    action,
+  };
+  const response = await orchestrateAgent(requestPayload, context);
+  const dailyPlan = action === "daily_plan"
+    ? buildDailyPlan(context)
+    : undefined;
+  const { data: savedConversationId, error: saveError } = await supabase.rpc(
+    "append_ai_exchange",
+    {
+      p_conversation_id: conversationId || null,
+      p_project_id: projectId || null,
+      p_user_content: message,
+      p_assistant_content: response.message,
+      p_metadata: { ...response, ...(dailyPlan ? { dailyPlan } : {}) },
+    },
+  );
+  if (saveError || !savedConversationId) {
+    console.error("[ai-assistant] Conversation persistence failed", {
+      errorType: saveError?.code || "UnknownError",
     });
-  } catch {
-    if (isNewConversation) await admin.from('ai_conversations').delete().eq('id', conversationId).eq('user_id', user.id);
-    throw new ApiError(502, 'Could not reach the AI provider. Please try again.');
+    throw new ApiError(
+      503,
+      "The AI response could not be saved. Please try again.",
+    );
   }
-
-  if (!response.ok) {
-    if (isNewConversation) await admin.from('ai_conversations').delete().eq('id', conversationId).eq('user_id', user.id);
-    console.error('[ai-assistant] Provider request failed', { status: response.status });
-    throw new ApiError(502, 'The AI provider could not answer right now. Please try again.');
-  }
-
-  const result = await response.json();
-  const assistantContent = result.choices?.[0]?.message?.content;
-  if (typeof assistantContent !== 'string' || !assistantContent.trim()) {
-    if (isNewConversation) await admin.from('ai_conversations').delete().eq('id', conversationId).eq('user_id', user.id);
-    throw new ApiError(502, 'The AI provider returned an empty response. Please try again.');
-  }
-
-  const userMessageTime = new Date();
-  const { data: savedMessages, error: messageError } = await admin.from('ai_messages').insert([
-    { conversation_id: conversationId, role: 'user', content: message, created_at: userMessageTime.toISOString() },
-    { conversation_id: conversationId, role: 'assistant', content: assistantContent.trim(), created_at: new Date(userMessageTime.getTime() + 1).toISOString() }
-  ]).select('id,role,content,created_at');
-  if (messageError) {
-    if (isNewConversation) await admin.from('ai_conversations').delete().eq('id', conversationId).eq('user_id', user.id);
-    throw new ApiError(500, 'The response was generated but could not be saved. Please try again.');
-  }
-
-  const { error: updateError } = await admin.from('ai_conversations')
-    .update({ updated_at: new Date().toISOString() })
-    .eq('id', conversationId)
-    .eq('user_id', user.id);
-  if (updateError) console.warn('[ai-assistant] Conversation timestamp could not be updated', { code: updateError.code });
-
   return {
-    conversationId,
-    messages: savedMessages.sort((a, b) => a.created_at.localeCompare(b.created_at)).map((saved) => ({ id: saved.id, role: saved.role, content: saved.content, createdAt: saved.created_at }))
+    ...response,
+    conversationId: savedConversationId,
+    ...(dailyPlan ? { dailyPlan } : {}),
   };
 }
 
 Deno.serve(async (request: Request) => {
-  if (request.method === 'OPTIONS') return json({});
-  if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+  if (request.method === "OPTIONS") return jsonResponse({});
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed." }, 405);
+  }
+
   try {
-    return json(await handleRequest(request));
+    return jsonResponse(await handleRequest(request));
   } catch (error) {
-    if (error instanceof ApiError) return json({ error: error.message }, error.status);
-    console.error('[ai-assistant] Request failed unexpectedly', { error: error instanceof Error ? error.name : 'UnknownError' });
-    return json({ error: 'AI request failed unexpectedly. Please try again.' }, 500);
+    if (error instanceof ApiError) {
+      return jsonResponse({ error: error.message }, error.status);
+    }
+    if (error instanceof AiConfigurationError) {
+      return jsonResponse({ error: error.message }, 503);
+    }
+    if (error instanceof AiProviderError) {
+      return jsonResponse({
+        error: "The AI provider could not answer right now. Please try again.",
+      }, 502);
+    }
+    console.error("[ai-assistant] Request failed", {
+      errorType: error instanceof Error ? error.name : "UnknownError",
+    });
+    return jsonResponse({
+      error: "AI request failed unexpectedly. Please try again.",
+    }, 500);
   }
 });

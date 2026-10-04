@@ -1,137 +1,119 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Card from '../common/Card';
 import Button from '../common/Button';
-import { getProjects } from '../../services/projects/projectService';
-import { getAiConversations, getAiMessages, sendAiMessage } from '../../services/ai/aiService';
+import { sendAiMessage } from '../../services/ai/aiService';
+import TaskPlanSuggestion from '../ai/TaskPlanSuggestion';
 
-const prompts = {
-  'Ask AI': '',
-  'Analyze Project': 'Help me analyze my project. Ask me for the details you need.',
-  'Find Risks': 'Help me identify project risks based on information I provide.',
-  'Generate Plan': 'Help me create a practical project plan. Ask clarifying questions first.'
-};
+const starterMessage = 'What should I work on today?';
 
-export default function AIAssistant({ session }) {
+export default function AIAssistant({ session, projects = [], onTasksCreated }) {
   const [open, setOpen] = useState(false);
-  const [projects, setProjects] = useState([]);
-  const [conversations, setConversations] = useState([]);
-  const [conversationId, setConversationId] = useState('');
+  const [mode, setMode] = useState('assistant');
+  const [message, setMessage] = useState(starterMessage);
   const [projectId, setProjectId] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [draft, setDraft] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [conversationId, setConversationId] = useState('');
+  const [response, setResponse] = useState(null);
+  const [responseSequence, setResponseSequence] = useState(0);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let active = true;
-    const user = {
-      id: session.user.id,
-      profile: {
-        full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
-        email: session.user.email || ''
-      }
-    };
-    Promise.all([getProjects(user), getAiConversations(session.user.id)]).then(([projectRows, conversationRows]) => {
-      if (!active) return;
-      setProjects(projectRows.filter((project) => !project.archived));
-      setConversations(conversationRows);
-    }).catch((loadError) => {
-      if (active) setError(loadError.message || 'Could not load AI conversations.');
-    }).finally(() => {
-      if (active) setLoading(false);
-    });
-    return () => { active = false; };
-  }, [session.user.id]);
-
-  const selectConversation = async (id) => {
-    setConversationId(id);
-    setMessages([]);
-    setError('');
-    if (!id) return;
-    const conversation = conversations.find((item) => item.id === id);
-    setProjectId(conversation?.project_id || '');
-    setLoadingMessages(true);
-    try {
-      setMessages(await getAiMessages(id));
-    } catch (loadError) {
-      setError(loadError.message || 'Could not load this conversation.');
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
-
-  const startPrompt = (prompt) => {
-    setOpen(true);
-    setError('');
-    setDraft(prompt);
-    if (!conversationId) setMessages([]);
-  };
-
   const send = async (event) => {
     event.preventDefault();
-    const content = draft.trim();
-    if (!content || sending) return;
+    const prompt = message.trim();
+    if (!prompt || sending) return;
+    if (!session?.access_token) {
+      setError('Sign in again to use Planwise AI.');
+      return;
+    }
+
     setSending(true);
     setError('');
-    const optimisticId = `pending-${Date.now()}`;
-    setMessages((current) => [...current, { id: optimisticId, role: 'user', content }]);
-    setDraft('');
+    setResponse(null);
     try {
-      const result = await sendAiMessage({ conversationId, projectId, message: content });
+      const result = await sendAiMessage(prompt, {
+        agent: mode === 'planner' ? 'task_planner' : 'personal_assistant',
+        projectId: mode === 'planner' ? projectId || undefined : undefined,
+        conversationId: conversationId || undefined
+      });
+      setResponse(result);
+      setResponseSequence((value) => value + 1);
       setConversationId(result.conversationId);
-      setMessages((current) => [...current.filter((message) => message.id !== optimisticId), ...result.messages]);
-      const updatedConversations = await getAiConversations(session.user.id);
-      setConversations(updatedConversations);
     } catch (sendError) {
-      setMessages((current) => current.filter((message) => message.id !== optimisticId));
-      setDraft(content);
       setError(sendError.message || 'AI request failed. Please try again.');
     } finally {
       setSending(false);
     }
   };
 
-  const newConversation = () => {
-    setConversationId('');
-    setProjectId('');
-    setMessages([]);
-    setDraft('');
-    setError('');
-  };
-
   return (
-    <Card className="panel-card ai-panel">
-      <div className="ai-badge">AI</div>
-      <div className="ai-copy">
-        <h3>Planwise AI</h3>
-        <p>Ask planning questions and keep conversations connected to your projects.</p>
-      </div>
-
-      <div className="ai-actions">
-        {Object.entries(prompts).map(([label, prompt]) => <Button key={label} variant={label === 'Ask AI' ? 'primary' : 'secondary'} size="md" onClick={() => startPrompt(prompt)}>{label}</Button>)}
-      </div>
-
-      {open && <section className="ai-chat" aria-label="Planwise AI conversation">
-        <div className="ai-chat-controls">
-          <label>Conversation<select value={conversationId} onChange={(event) => selectConversation(event.target.value)} disabled={loading || sending}><option value="">New conversation</option>{conversations.map((conversation) => <option key={conversation.id} value={conversation.id}>{conversation.title}</option>)}</select></label>
-          <label>Project<select value={projectId} onChange={(event) => setProjectId(event.target.value)} disabled={Boolean(conversationId) || sending}><option value="">No project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
-          <Button type="button" variant="secondary" size="sm" onClick={newConversation}>New chat</Button>
+    <Card className="panel-card ai-panel ai-assistant-card">
+      <div className="ai-assistant-heading">
+        <div className="ai-badge" aria-hidden="true">AI</div>
+        <div className="ai-copy">
+          <h3>Planwise AI</h3>
+          <p>Get a secure, personalized starting point for your workday.</p>
         </div>
-        {error && <p className="ai-chat-error" role="alert">{error}</p>}
-        {loading && <div className="ai-chat-empty" role="status">Loading conversations…</div>}
-        {!loading && loadingMessages && <div className="ai-chat-empty" role="status">Loading conversation…</div>}
-        {!loading && !loadingMessages && <div className="ai-chat-messages" aria-live="polite">
-          {messages.map((message) => <article className={`ai-chat-message ai-message-${message.role}`} key={message.id}><strong>{message.role === 'assistant' ? 'Planwise AI' : 'You'}</strong><p>{message.content}</p></article>)}
-          {!messages.length && <div className="ai-chat-empty">Choose a project if useful, then ask a question.</div>}
-          {sending && <div className="ai-chat-empty" role="status">Planwise AI is thinking…</div>}
-        </div>}
-        <form className="ai-chat-form" onSubmit={send}>
-          <textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows="2" maxLength="4000" placeholder="Ask Planwise AI…" aria-label="Message Planwise AI" disabled={loading || loadingMessages || sending} />
-          <Button type="submit" disabled={loading || loadingMessages || sending || !draft.trim()}>{sending ? 'Sending…' : 'Send'}</Button>
-        </form>
-      </section>}
+        <Button type="button" variant="secondary" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+          {open ? 'Close' : 'Ask AI'}
+        </Button>
+      </div>
+
+      {open && (
+        <div className="ai-assistant-content">
+          <div className="ai-mode-switch" role="group" aria-label="AI mode">
+            <button type="button" className={mode === 'assistant' ? 'active' : ''} onClick={() => {
+              setMode('assistant');
+              setConversationId('');
+              setResponse(null);
+              setMessage(starterMessage);
+            }}>Ask my assistant</button>
+            <button type="button" className={mode === 'planner' ? 'active' : ''} onClick={() => {
+              setMode('planner');
+              setConversationId('');
+              setResponse(null);
+              setMessage('');
+            }}>Plan a task</button>
+          </div>
+          {mode === 'planner' && <label className="ai-project-select"><span>Create suggestions for</span><select value={projectId} onChange={(event) => {
+            setProjectId(event.target.value);
+            setConversationId('');
+            setResponse(null);
+          }} disabled={sending}><option value="">Personal Tasks</option>{projects.map((project) => <option value={project.id} key={project.id}>{project.name}</option>)}</select></label>}
+          <form className="ai-chat-form" onSubmit={send}>
+            <textarea
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              rows="2"
+              maxLength="4000"
+              placeholder={mode === 'planner' ? 'Describe the task you want to plan…' : 'Ask Planwise AI…'}
+              aria-label={mode === 'planner' ? 'Describe a task to plan' : 'Message Planwise AI'}
+              disabled={sending}
+            />
+            <Button type="submit" disabled={sending || !message.trim()}>
+              {sending ? 'Thinking…' : mode === 'planner' ? 'Generate suggestion' : 'Send'}
+            </Button>
+          </form>
+
+          {sending && <p className="ai-chat-empty" role="status">Planwise AI is reviewing your authorized workspace context…</p>}
+          {error && <p className="ai-chat-error" role="alert">{error}</p>}
+          {response && (
+            <section className="ai-assistant-response" aria-live="polite" aria-label="Planwise AI response">
+              <p>{response.message}</p>
+              {response.taskPlan && <TaskPlanSuggestion key={responseSequence} plan={response.taskPlan} projectId={projectId || null} onCreated={onTasksCreated} />}
+              {response.recommendations.length > 0 && (
+                <ul>
+                  {response.recommendations.map((recommendation, index) => (
+                    <li key={recommendation.taskId || `${recommendation.title}-${index}`}>
+                      <strong>{recommendation.title}</strong>
+                      <span>{recommendation.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

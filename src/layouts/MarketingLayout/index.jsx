@@ -3,7 +3,7 @@ import AnimatedPlanningBackground from '../../components/common/AnimatedPlanning
 
 export default function MarketingLayout({ children, onNavigate, backgroundVariant = 'default' }) {
   return (
-    <div className="app-shell marketing-shell">
+    <div className={`app-shell marketing-shell${backgroundVariant === 'home' ? ' landing-shell' : ''}`}>
       <Navbar onNavigate={onNavigate} />
       <main className="page-transition">
         <AnimatedPlanningBackground variant={backgroundVariant} />

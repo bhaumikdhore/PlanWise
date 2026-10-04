@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabaseClient.js';
 import { recordActivity } from '../activity/activityLogService.js';
 
 const validStatuses = new Set(['todo', 'in_progress', 'in_review', 'blocked', 'completed', 'cancelled']);
-const validPriorities = new Set(['low', 'medium', 'high']);
+const validPriorities = new Set(['low', 'medium', 'high', 'urgent']);
 
 function requireClient() {
   if (!supabase) throw new Error('Configure VITE_SUPABASE_URL and a Supabase anon or publishable key first.');
@@ -66,7 +66,7 @@ function taskPayload(task) {
   };
 }
 
-async function syncAssignees(taskId, assigneeIds) {
+async function syncAssignees(taskId, assigneeIds, assignedBy) {
   const desired = [...new Set(assigneeIds || [])];
   const { data: existing, error: readError } = await supabase.from('task_assignees')
     .select('user_id')
@@ -78,7 +78,11 @@ async function syncAssignees(taskId, assigneeIds) {
   const toAdd = desired.filter((id) => !current.has(id));
   const toRemove = [...current].filter((id) => !wanted.has(id));
   if (toAdd.length) {
-    const { error } = await supabase.from('task_assignees').insert(toAdd.map((userId) => ({ task_id: taskId, user_id: userId })));
+    const { error } = await supabase.from('task_assignees').insert(toAdd.map((userId) => ({
+      task_id: taskId,
+      user_id: userId,
+      assigned_by: assignedBy
+    })));
     if (error) throw error;
   }
   if (toRemove.length) {
@@ -118,6 +122,8 @@ export async function getTasks(projectId) {
 
 export async function saveTask(task, userId) {
   requireClient();
+  if (!userId) throw new Error('Sign in before saving a task.');
+  if (!String(task.title || '').trim()) throw new Error('Enter a task title.');
   const isNew = !task.id;
   const payload = taskPayload(task);
   const query = task.id
@@ -126,7 +132,7 @@ export async function saveTask(task, userId) {
   const { data, error } = await query.select('*').single();
   if (error) throw error;
   try {
-    await syncAssignees(data.id, task.assigneeIds || []);
+    await syncAssignees(data.id, task.assigneeIds || [], userId);
   } catch (assigneeError) {
     if (!task.id) await supabase.from('tasks').delete().eq('id', data.id);
     throw assigneeError;
@@ -186,4 +192,29 @@ export async function deleteTask(taskId, userId) {
   const { data, error } = await supabase.from('tasks').delete().eq('id', taskId).select('id,project_id,title').single();
   if (error) throw error;
   await recordActivity({ actorId: userId, projectId: data.project_id, action: 'task_deleted', entityType: 'task', entityId: data.id, metadata: { title: data.title } });
+}
+
+export function subscribeToTaskChanges(onChange, onError) {
+  requireClient();
+  let refreshTimer;
+  const channel = supabase
+    .channel(`task-changes-${crypto.randomUUID()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(onChange, 100);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' }, () => {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(onChange, 100);
+    })
+    .subscribe((status) => {
+      if (['CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) {
+        onError?.(new Error('Live task updates are unavailable. Refresh the page to check for changes.'));
+      }
+    });
+
+  return () => {
+    window.clearTimeout(refreshTimer);
+    supabase.removeChannel(channel);
+  };
 }

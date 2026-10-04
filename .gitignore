@@ -8,3 +8,5 @@ dist
 backend/.env
 .env.local
 supabase/.temp/
+supabase/functions/.env
+!supabase/functions/.env.example
