@@ -131,8 +131,20 @@ export async function saveTask(task) {
   const payload = taskPayload(task);
   const query = task.id
     ? supabase.from('tasks').update(payload).eq('id', task.id)
-    : supabase.from('tasks').insert({ ...payload, created_by: userId });
-  const { data, error } = await query.select('*').single();
+    : supabase.rpc('create_task_for_authenticated_user', {
+      p_project_id: payload.project_id,
+      p_title: payload.title,
+      p_description: payload.description,
+      p_status: payload.status,
+      p_priority: payload.priority,
+      p_category: payload.category,
+      p_due_at: payload.due_at,
+      p_reviewer_id: payload.reviewer_id,
+      p_review_feedback: payload.review_feedback,
+      p_completed_at: payload.completed_at
+    });
+  const { data: result, error } = await query.select('*').single();
+  const data = isNew ? (Array.isArray(result) ? result[0] : result) : result;
   if (error) throw error;
   try {
     await syncAssignees(data.id, task.assigneeIds || [], userId);
