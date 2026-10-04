@@ -182,7 +182,7 @@ function ProjectDetails({ project, tasks, meetings, user, onBack, onEdit, onSucc
     event.preventDefault();
     if (!taskDraft.title.trim()) { setFormError('Task title is required.'); return; }
     try {
-      await saveTask({ ...taskDraft, description: '', dueTime: '09:00', category: 'Work', done: false, projectId: project.id }, user.id);
+      await saveTask({ ...taskDraft, description: '', dueTime: '09:00', category: 'Work', done: false, projectId: project.id });
       setTaskDraft({ title: '', dueDate: '', priority: 'Medium' });
       setTaskModal(false);
       setFormError('');

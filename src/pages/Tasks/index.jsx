@@ -175,7 +175,7 @@ export default function TasksPage({ onNavigate, onLogout, session }) {
         project: project?.name || '',
         title: draft.title.trim(),
         status: currentTask?.status || requestedStatus
-      }, user.id);
+      });
       if (currentTask && currentTask.status !== requestedStatus) {
         await transitionTaskStatus(savedTask, requestedStatus);
       }

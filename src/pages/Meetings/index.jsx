@@ -372,7 +372,7 @@ export default function MeetingsPage({ onNavigate, onLogout, session }) {
       assigneeIds: item.assignee ? [item.assignee] : []
     };
     try {
-      const createdTask = await saveTask(task, session.user.id);
+      const createdTask = await saveTask(task);
       const saved = await saveMeeting({
         ...selectedMeeting,
         actionItems: selectedMeeting.actionItems.map((action) => action.id === item.id ? { ...action, taskId: createdTask.id } : action)

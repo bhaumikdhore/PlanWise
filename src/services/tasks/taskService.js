@@ -120,9 +120,12 @@ export async function getTasks(projectId) {
   return data.map((task) => mapTask(task, assignedByTask.get(task.id) || [], profiles));
 }
 
-export async function saveTask(task, userId) {
+export async function saveTask(task) {
   requireClient();
-  if (!userId) throw new Error('Sign in before saving a task.');
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!user) throw new Error('Sign in before saving a task.');
+  const userId = user.id;
   if (!String(task.title || '').trim()) throw new Error('Enter a task title.');
   const isNew = !task.id;
   const payload = taskPayload(task);
