@@ -11,6 +11,8 @@ import TasksPage from './pages/Tasks';
 import AnalyticsPage from './pages/Analytics';
 import ProjectsPage from './pages/Projects';
 import TeamPage from './pages/Team';
+import PrivacyPage from './pages/Privacy';
+import TermsPage from './pages/Terms';
 const CalendarPage = lazy(() => import('./pages/Calendar'));
 const MeetingsPage = lazy(() => import('./pages/Meetings'));
 import { supabase } from './lib/supabaseClient';
@@ -30,7 +32,9 @@ const views = {
   meetings: 'meetings',
   analytics: 'analytics',
   projects: 'projects',
-  team: 'team'
+  team: 'team',
+  privacy: 'privacy',
+  terms: 'terms'
 };
 
 const pathViews = {
@@ -48,7 +52,9 @@ const pathViews = {
   '/meetings': views.meetings,
   '/analytics': views.analytics,
   '/projects': views.projects,
-  '/team': views.team
+  '/team': views.team,
+  '/privacy': views.privacy,
+  '/terms': views.terms
 };
 
 const routeForPath = (path) => {
@@ -155,6 +161,8 @@ export default function App() {
     if (activeView === views.analytics) return <AnalyticsPage onNavigate={navigate} onLogout={logout} session={session} />;
     if (activeView === views.projects) return <ProjectsPage onNavigate={navigate} onLogout={logout} session={session} locationPath={locationPath} />;
     if (activeView === views.team) return <TeamPage onNavigate={navigate} onLogout={logout} session={session} />;
+    if (activeView === views.privacy) return <PrivacyPage onNavigate={navigate} />;
+    if (activeView === views.terms) return <TermsPage onNavigate={navigate} />;
     if (activeView === views.home) return <HomePage onNavigate={navigate} />;
     return <DashboardPage onNavigate={navigate} />;
   }, [activeView, locationPath]);

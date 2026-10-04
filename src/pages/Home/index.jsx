@@ -16,7 +16,7 @@ export default function HomePage({ onNavigate }) {
       <HowItWorks />
       <DashboardShowcase />
       <CTA onNavigate={onNavigate} />
-      <Footer />
+      <Footer onNavigate={onNavigate} />
     </MarketingLayout>
   );
 }

@@ -15,7 +15,12 @@ const footerColumns = [
   }
 ];
 
-export default function Footer() {
+export default function Footer({ onNavigate }) {
+  const navigateTo = (event, page) => {
+    event.preventDefault();
+    onNavigate(page);
+  };
+
   return (
     <footer id="about" className="site-footer">
       <Container>
@@ -49,8 +54,8 @@ export default function Footer() {
 
         <div className="footer-bottom">
           <span>© 2026 Planwise</span>
-          <span>Privacy</span>
-          <span>Terms</span>
+          <a href="/privacy" onClick={(event) => navigateTo(event, 'privacy')}>Privacy</a>
+          <a href="/terms" onClick={(event) => navigateTo(event, 'terms')}>Terms</a>
           <span>hello@planwise.io</span>
         </div>
       </Container>

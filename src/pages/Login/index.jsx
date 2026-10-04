@@ -54,6 +54,9 @@ export default function LoginPage({ onNavigate }) {
           <Button type="button" variant="secondary" className="auth-submit" onClick={() => onNavigate('home')}>
             Back to home
           </Button>
+          <p className="auth-legal-notice">
+            Read our <a href="/terms" onClick={(event) => { event.preventDefault(); onNavigate('terms'); }}>Terms of Service</a> and <a href="/privacy" onClick={(event) => { event.preventDefault(); onNavigate('privacy'); }}>Privacy Policy</a>.
+          </p>
         </form>
       </AuthCard>
     </AuthLayout>

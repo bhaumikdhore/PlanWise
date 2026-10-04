@@ -74,6 +74,9 @@ export default function RegisterPage({ onNavigate }) {
           <Button type="button" variant="secondary" className="auth-submit auth-secondary-action" onClick={() => onNavigate('home')}>
             Back to home
           </Button>
+          <p className="auth-legal-notice">
+            By creating an account, you agree to our <a href="/terms" onClick={(event) => { event.preventDefault(); onNavigate('terms'); }}>Terms of Service</a> and acknowledge our <a href="/privacy" onClick={(event) => { event.preventDefault(); onNavigate('privacy'); }}>Privacy Policy</a>.
+          </p>
         </form>
       </AuthCard>
     </AuthLayout>
